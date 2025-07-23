@@ -1,0 +1,331 @@
+@page
+@model SharingMezzi.Web.Pages.ProfileModel
+@{
+    ViewData["Title"] = "Profilo Utente";
+}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Il mio Profilo</h1>
+            <p class="text-muted">Gestisci le tue informazioni personali</p>
+        </div>
+        <button class="btn btn-primary" id="editProfileBtn">
+            <i class="fas fa-edit me-2"></i>
+            Modifica Profilo
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <!-- Profile Card -->
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="profile-avatar mb-3">
+                    <div class="user-avatar-large">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+                <h4 class="mb-1">@Model.User.FirstName @Model.User.LastName</h4>
+                <p class="text-muted mb-3">@Model.User.Email</p>
+                <span class="badge bg-@(Model.User.Role == "Admin" ? "warning" : "primary") mb-3">
+                    @(Model.User.Role == "Admin" ? "Amministratore" : "Utente")
+                </span>
+                <div class="d-flex justify-content-center">
+                    <div class="text-center me-3">
+                        <h5 class="mb-0">€@Model.User.Balance.ToString("F2")</h5>
+                        <small class="text-muted">Saldo</small>
+                    </div>
+                    <div class="text-center me-3">
+                        <h5 class="mb-0">@Model.User.TotalTrips</h5>
+                        <small class="text-muted">Corse</small>
+                    </div>
+                    <div class="text-center">
+                        <h5 class="mb-0">@Model.EcoPoints</h5>
+                        <small class="text-muted">Punti Eco</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Status -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Stato Account</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Account</span>
+                    <span class="badge bg-@(Model.User.IsActive ? "success" : "secondary")">
+                        @(Model.User.IsActive ? "Attivo" : "Disattivo")
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Membro da</span>
+                    <span class="text-muted">@Model.User.CreatedAt.ToString("dd/MM/yyyy")</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Ultimo accesso</span>
+                    <span class="text-muted">@(Model.User.LastLogin?.ToString("dd/MM/yyyy HH:mm") ?? "Mai")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <!-- Personal Information -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Informazioni Personali</h5>
+            </div>
+            <div class="card-body">
+                <form id="profileForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nome</label>
+                                <input type="text" class="form-control" id="firstName" value="@Model.User.FirstName" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Cognome</label>
+                                <input type="text" class="form-control" id="lastName" value="@Model.User.LastName" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" value="@Model.User.Email" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telefono</label>
+                        <input type="tel" class="form-control" id="phone" value="@Model.Phone" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Indirizzo</label>
+                        <input type="text" class="form-control" id="address" value="@Model.Address" readonly>
+                    </div>
+                    <div class="form-actions" style="display: none;">
+                        <button type="button" class="btn btn-secondary me-2" id="cancelEditBtn">Annulla</button>
+                        <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Cambia Password</h5>
+            </div>
+            <div class="card-body">
+                <form id="passwordForm">
+                    <div class="mb-3">
+                        <label class="form-label">Password Attuale</label>
+                        <input type="password" class="form-control" name="currentPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nuova Password</label>
+                        <input type="password" class="form-control" name="newPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Conferma Nuova Password</label>
+                        <input type="password" class="form-control" name="confirmPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning">Cambia Password</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Activity Summary -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Riassunto Attività</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <div class="stat-item">
+                            <h4 class="text-primary">@Model.TotalTrips</h4>
+                            <p class="text-muted mb-0">Corse Totali</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="stat-item">
+                            <h4 class="text-success">@Model.TotalDistance km</h4>
+                            <p class="text-muted mb-0">Distanza Percorsa</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="stat-item">
+                            <h4 class="text-info">@Model.TotalTime min</h4>
+                            <p class="text-muted mb-0">Tempo Totale</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="stat-item">
+                            <h4 class="text-warning">€@Model.TotalSpent.ToString("F2")</h4>
+                            <p class="text-muted mb-0">Spesa Totale</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        class ProfileManager {
+            constructor() {
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.getElementById('editProfileBtn').addEventListener('click', () => {
+                    this.enableEditMode();
+                });
+
+                document.getElementById('cancelEditBtn').addEventListener('click', () => {
+                    this.disableEditMode();
+                });
+
+                document.getElementById('profileForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveProfile();
+                });
+
+                document.getElementById('passwordForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.changePassword();
+                });
+            }
+
+            enableEditMode() {
+                const inputs = document.querySelectorAll('#profileForm input');
+                inputs.forEach(input => {
+                    if (input.id !== 'email') { // Keep email readonly
+                        input.removeAttribute('readonly');
+                    }
+                });
+
+                document.getElementById('editProfileBtn').style.display = 'none';
+                document.querySelector('.form-actions').style.display = 'block';
+            }
+
+            disableEditMode() {
+                const inputs = document.querySelectorAll('#profileForm input');
+                inputs.forEach(input => {
+                    input.setAttribute('readonly', 'readonly');
+                });
+
+                document.getElementById('editProfileBtn').style.display = 'block';
+                document.querySelector('.form-actions').style.display = 'none';
+            }
+
+            async saveProfile() {
+                const formData = {
+                    firstName: document.getElementById('firstName').value,
+                    lastName: document.getElementById('lastName').value,
+                    phone: document.getElementById('phone').value,
+                    address: document.getElementById('address').value
+                };
+
+                try {
+                    const response = await fetch('/api/profile', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (response.ok) {
+                        showAlert('Profilo aggiornato con successo!', 'success');
+                        this.disableEditMode();
+                    } else {
+                        showAlert('Errore durante l\'aggiornamento del profilo', 'error');
+                    }
+                } catch (error) {
+                    showAlert('Errore di connessione', 'error');
+                }
+            }
+
+            async changePassword() {
+                const formData = new FormData(document.getElementById('passwordForm'));
+                const newPassword = formData.get('newPassword');
+                const confirmPassword = formData.get('confirmPassword');
+
+                if (newPassword !== confirmPassword) {
+                    showAlert('Le password non coincidono', 'error');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    showAlert('La password deve essere di almeno 6 caratteri', 'error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/profile/password', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify({
+                            currentPassword: formData.get('currentPassword'),
+                            newPassword: newPassword
+                        })
+                    });
+
+                    if (response.ok) {
+                        showAlert('Password cambiata con successo!', 'success');
+                        document.getElementById('passwordForm').reset();
+                    } else {
+                        const error = await response.json();
+                        showAlert(error.message || 'Errore durante il cambio password', 'error');
+                    }
+                } catch (error) {
+                    showAlert('Errore di connessione', 'error');
+                }
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ProfileManager();
+        });
+    </script>
+}
+
+<style>
+    .user-avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        margin: 0 auto;
+    }
+
+    .stat-item {
+        padding: 1rem;
+        border-radius: 8px;
+        background: rgba(0, 123, 255, 0.05);
+        margin-bottom: 1rem;
+    }
+
+    .form-actions {
+        border-top: 1px solid #dee2e6;
+        padding-top: 1rem;
+        margin-top: 1rem;
+    }
+</style>

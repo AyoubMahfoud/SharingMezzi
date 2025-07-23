@@ -1,0 +1,385 @@
+@page
+@model SharingMezzi.Web.Pages.BillingModel
+@using SharingMezzi.Web.Models
+@{
+    ViewData["Title"] = "Ricariche e Pagamenti";
+}
+
+<div class="page-header">
+    <h1 class="page-title">Ricariche e Pagamenti</h1>
+    <p class="page-subtitle">Gestisci il tuo saldo e visualizza lo storico delle transazioni</p>
+</div>
+
+<!-- Balance Card -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-wallet text-primary"></i>
+                    Saldo Attuale
+                </h5>
+                <div class="d-flex align-items-center">
+                    <div class="balance-amount">
+                        €<span id="currentBalance">@Model.CurrentBalance</span>
+                    </div>
+                    <div class="ms-auto">
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rechargeModal">
+                            <i class="fas fa-plus"></i> Ricarica
+                        </button>
+                    </div>
+                </div>
+                <small class="text-muted">Credito minimo richiesto: €@Model.MinimumCredit</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-leaf text-success"></i>
+                    Punti Eco
+                </h5>
+                <div class="d-flex align-items-center">
+                    <div class="eco-points">
+                        <span id="ecoPoints">@Model.EcoPoints</span> punti
+                    </div>
+                    <div class="ms-auto">
+                        <button class="btn btn-outline-success btn-sm" onclick="showEcoInfo()">
+                            <i class="fas fa-info-circle"></i> Info
+                        </button>
+                    </div>
+                </div>
+                <small class="text-muted">Guadagna punti usando mezzi ecologici</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recharge History -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-history text-primary"></i>
+            Storico Ricariche
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (Model.Recharges.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Importo</th>
+                            <th>Metodo</th>
+                            <th>Stato</th>
+                            <th>Saldo Finale</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var recharge in Model.Recharges)
+                        {
+                            <tr>
+                                <td>@recharge.DataRicarica.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="fw-bold text-success">+€@recharge.Importo</td>
+                                <td>
+                                    @{
+                                        var methodIcon = recharge.MetodoPagamento switch
+                                        {
+                                            PaymentMethod.CartaCredito => "fas fa-credit-card",
+                                            PaymentMethod.PayPal => "fab fa-paypal",
+                                            PaymentMethod.Bonifico => "fas fa-university",
+                                            _ => "fas fa-wallet"
+                                        };
+                                    }
+                                    <i class="@methodIcon me-1"></i>
+                                    @recharge.MetodoPagamento
+                                </td>
+                                <td>
+                                    @{
+                                        var statusClass = recharge.Stato switch
+                                        {
+                                            PaymentStatus.Completato => "badge bg-success",
+                                            PaymentStatus.InAttesa => "badge bg-warning",
+                                            PaymentStatus.Fallito => "badge bg-danger",
+                                            PaymentStatus.Annullato => "badge bg-secondary",
+                                            _ => "badge bg-secondary"
+                                        };
+                                    }
+                                    <span class="@statusClass">@recharge.Stato</span>
+                                </td>
+                                <td class="fw-bold">€@recharge.SaldoFinale</td>
+                                <td>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="showRechargeDetails(@recharge.Id)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                <h5>Nessuna ricarica effettuata</h5>
+                <p class="text-muted">Quando effettuerai la prima ricarica, apparirà qui lo storico</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rechargeModal">
+                    <i class="fas fa-plus"></i> Effettua prima ricarica
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Recharge Modal -->
+<div class="modal fade" id="rechargeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ricarica Credito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="rechargeForm">
+                    <div class="mb-3">
+                        <label for="rechargeAmount" class="form-label">Importo da ricaricare</label>
+                        <div class="input-group">
+                            <span class="input-group-text">€</span>
+                            <input type="number" class="form-control" id="rechargeAmount" name="amount" 
+                                   min="5" max="500" step="0.01" required>
+                        </div>
+                        <div class="form-text">Importo minimo: €5.00, massimo: €500.00</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="paymentMethod" class="form-label">Metodo di pagamento</label>
+                        <select class="form-control" id="paymentMethod" name="paymentMethod" required>
+                            <option value="">Seleziona metodo</option>
+                            <option value="1">Carta di Credito</option>
+                            <option value="2">PayPal</option>
+                            <option value="3">Bonifico Bancario</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="rechargeNotes" class="form-label">Note (opzionale)</label>
+                        <textarea class="form-control" id="rechargeNotes" name="notes" rows="3"
+                                  placeholder="Aggiungi eventuali note..."></textarea>
+                    </div>
+
+                    <!-- Quick Amount Buttons -->
+                    <div class="mb-3">
+                        <label class="form-label">Importi rapidi</label>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setAmount(10)">€10</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setAmount(25)">€25</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setAmount(50)">€50</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setAmount(100)">€100</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-primary" onclick="processRecharge()">
+                    <i class="fas fa-credit-card"></i> Procedi al pagamento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recharge Details Modal -->
+<div class="modal fade" id="rechargeDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dettagli Ricarica</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="rechargeDetailsContent">
+                <!-- Recharge details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function setAmount(amount) {
+            document.getElementById('rechargeAmount').value = amount;
+        }
+
+        async function processRecharge() {
+            const form = document.getElementById('rechargeForm');
+            const formData = new FormData(form);
+            
+            const rechargeData = {
+                importo: parseFloat(formData.get('amount')),
+                metodoPagamento: parseInt(formData.get('paymentMethod')),
+                note: formData.get('notes')
+            };
+
+            // Validate
+            if (rechargeData.importo < 5 || rechargeData.importo > 500) {
+                app.showAlert('Importo non valido. Deve essere tra €5.00 e €500.00', 'warning');
+                return;
+            }
+
+            if (!rechargeData.metodoPagamento) {
+                app.showAlert('Seleziona un metodo di pagamento', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/recharges', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${app.getToken()}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(rechargeData)
+                });
+
+                if (response.ok) {
+                    app.showAlert('Ricarica completata con successo!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('rechargeModal')).hide();
+                    
+                    // Refresh page to show updated balance
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    app.showAlert('Errore durante la ricarica. Riprova più tardi.', 'danger');
+                }
+            } catch (error) {
+                console.error('Error processing recharge:', error);
+                app.showAlert('Errore di connessione', 'danger');
+            }
+        }
+
+        async function showRechargeDetails(rechargeId) {
+            const modal = new bootstrap.Modal(document.getElementById('rechargeDetailsModal'));
+            const content = document.getElementById('rechargeDetailsContent');
+            
+            content.innerHTML = '<div class="text-center"><div class="spinner"></div> Caricamento...</div>';
+            modal.show();
+
+            try {
+                const response = await fetch(`/api/recharges/${rechargeId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${app.getToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    const recharge = await response.json();
+                    content.innerHTML = `
+                        <div class="recharge-details">
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>ID Transazione:</strong>
+                                </div>
+                                <div class="col-6">
+                                    ${recharge.transactionId || 'N/A'}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Data:</strong>
+                                </div>
+                                <div class="col-6">
+                                    ${new Date(recharge.dataRicarica).toLocaleString()}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Importo:</strong>
+                                </div>
+                                <div class="col-6">
+                                    €${recharge.importo}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Metodo:</strong>
+                                </div>
+                                <div class="col-6">
+                                    ${recharge.metodoPagamento}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Stato:</strong>
+                                </div>
+                                <div class="col-6">
+                                    ${recharge.stato}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Saldo precedente:</strong>
+                                </div>
+                                <div class="col-6">
+                                    €${recharge.saldoPrecedente}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Saldo finale:</strong>
+                                </div>
+                                <div class="col-6">
+                                    €${recharge.saldoFinale}
+                                </div>
+                            </div>
+                            ${recharge.note ? `
+                                <div class="row">
+                                    <div class="col-12">
+                                        <strong>Note:</strong>
+                                        <p class="mt-2">${recharge.note}</p>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei dettagli</div>';
+                }
+            } catch (error) {
+                console.error('Error loading recharge details:', error);
+                content.innerHTML = '<div class="alert alert-danger">Errore di connessione</div>';
+            }
+        }
+
+        function showEcoInfo() {
+            app.showAlert('I punti eco vengono assegnati quando usi mezzi elettrici. Più usi mezzi ecologici, più punti guadagni!', 'info');
+        }
+    </script>
+    
+    <style>
+        .balance-amount {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .eco-points {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .recharge-details .row {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+}

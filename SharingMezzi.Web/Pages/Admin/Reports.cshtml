@@ -1,0 +1,396 @@
+@page
+@model SharingMezzi.Web.Pages.Admin.ReportsModel
+@using SharingMezzi.Web.Models
+@{
+    ViewData["Title"] = "Report e Statistiche";
+}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Report e Statistiche</h1>
+            <p class="text-muted">Visualizza le statistiche della piattaforma e genera report</p>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="generateReport()">
+                <i class="fas fa-download me-2"></i>
+                Genera Report
+            </button>
+            <button class="btn btn-outline-secondary" onclick="refreshData()">
+                <i class="fas fa-refresh me-2"></i>
+                Aggiorna
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h3 class="mb-0">@Model.TotalUsers</h3>
+                        <p class="text-muted mb-0">Utenti</p>
+                    </div>
+                    <div class="stat-icon bg-primary">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+                <small class="text-success">+@Model.NewUsersThisMonth questa settimana</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h3 class="mb-0">@Model.TotalVehicles</h3>
+                        <p class="text-muted mb-0">Mezzi</p>
+                    </div>
+                    <div class="stat-icon bg-success">
+                        <i class="fas fa-car"></i>
+                    </div>
+                </div>
+                <small class="text-success">@Model.ActiveVehicles attivi</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h3 class="mb-0">@Model.TotalTrips</h3>
+                        <p class="text-muted mb-0">Corse</p>
+                    </div>
+                    <div class="stat-icon bg-warning">
+                        <i class="fas fa-route"></i>
+                    </div>
+                </div>
+                <small class="text-info">@Model.TripsToday oggi</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h3 class="mb-0">€@Model.TotalRevenue.ToString("F0")</h3>
+                        <p class="text-muted mb-0">Ricavi</p>
+                    </div>
+                    <div class="stat-icon bg-info">
+                        <i class="fas fa-euro-sign"></i>
+                    </div>
+                </div>
+                <small class="text-success">+@Model.RevenueGrowth% questo mese</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h3 class="mb-0">@Model.TotalParkings</h3>
+                        <p class="text-muted mb-0">Parcheggi</p>
+                    </div>
+                    <div class="stat-icon bg-secondary">
+                        <i class="fas fa-parking"></i>
+                    </div>
+                </div>
+                <small class="text-warning">@Model.AvailableSlots posti liberi</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h3 class="mb-0">@Model.AvgTripDuration</h3>
+                        <p class="text-muted mb-0">Min/Corsa</p>
+                    </div>
+                    <div class="stat-icon bg-dark">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+                <small class="text-muted">Durata media</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Utilizzo Mezzi per Settimana</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="weeklyUsageChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Ricavi Mensili</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyRevenueChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Distribuzione Tipologia Mezzi</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="vehicleTypesChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Attività Utenti per Fascia Oraria</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="hourlyActivityChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reports Tables -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Top 10 Utenti Attivi</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Utente</th>
+                                <th>Corse</th>
+                                <th>Speso</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in Model.TopUsers)
+                            {
+                                <tr>
+                                    <td>@user.Nome @user.Cognome</td>
+                                    <td>@user.TotalTrips</td>
+                                    <td>€@(user.TotalTrips * 15)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Mezzi Più Utilizzati</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Mezzo</th>
+                                <th>Tipo</th>
+                                <th>Utilizzi</th>
+                                <th>Stato</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var vehicle in Model.TopVehicles)
+                            {
+                                <tr>
+                                    <td>@vehicle.Modello</td>
+                                    <td>@vehicle.Tipo</td>
+                                    <td>@(new Random().Next(50, 200))</td>
+                                    <td>
+                                        <span class="badge bg-@(vehicle.Stato == VehicleStatus.Disponibile ? "success" : "warning")">
+                                            @vehicle.Stato
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        class AdminReportsManager {
+            constructor() {
+                this.initializeCharts();
+            }
+
+            initializeCharts() {
+                this.createWeeklyUsageChart();
+                this.createMonthlyRevenueChart();
+                this.createVehicleTypesChart();
+                this.createHourlyActivityChart();
+            }
+
+            createWeeklyUsageChart() {
+                const ctx = document.getElementById('weeklyUsageChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
+                        datasets: [{
+                            label: 'Corse',
+                            data: [65, 59, 80, 81, 56, 55, 40],
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            createMonthlyRevenueChart() {
+                const ctx = document.getElementById('monthlyRevenueChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu'],
+                        datasets: [{
+                            label: 'Ricavi (€)',
+                            data: [1200, 1900, 3000, 2500, 2800, 3200],
+                            backgroundColor: '#28a745',
+                            borderColor: '#28a745',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            createVehicleTypesChart() {
+                const ctx = document.getElementById('vehicleTypesChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Biciclette', 'Scooter', 'Auto', 'Monopattini'],
+                        datasets: [{
+                            data: [45, 25, 20, 10],
+                            backgroundColor: [
+                                '#007bff',
+                                '#28a745',
+                                '#ffc107',
+                                '#dc3545'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+
+            createHourlyActivityChart() {
+                const ctx = document.getElementById('hourlyActivityChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
+                        datasets: [{
+                            label: 'Utilizzi',
+                            data: [12, 45, 25, 30, 20, 35, 65, 40, 15],
+                            backgroundColor: '#6f42c1',
+                            borderColor: '#6f42c1',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Global functions
+        window.generateReport = function() {
+            showAlert('Report generato con successo!', 'success');
+        };
+
+        window.refreshData = function() {
+            location.reload();
+        };
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new AdminReportsManager();
+        });
+    </script>
+}

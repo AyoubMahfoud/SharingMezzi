@@ -1,0 +1,387 @@
+@page
+@model SharingMezzi.Web.Pages.TripsModel
+@using SharingMezzi.Web.Models
+@{
+    ViewData["Title"] = "Le mie corse";
+}
+
+<div class="page-header">
+    <h1 class="page-title">Le mie corse</h1>
+    <p class="page-subtitle">Visualizza lo storico delle tue corse e gli spostamenti</p>
+</div>
+
+<!-- Trip Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="dashboard-card">
+            <div class="dashboard-card-icon bg-primary text-white">
+                <i class="fas fa-route"></i>
+            </div>
+            <div class="dashboard-card-title">Corse Totali</div>
+            <div class="dashboard-card-value">@Model.Trips.Count</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card">
+            <div class="dashboard-card-icon bg-success text-white">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="dashboard-card-title">Tempo Totale</div>
+            <div class="dashboard-card-value">@Model.TotalMinutes min</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card">
+            <div class="dashboard-card-icon bg-warning text-white">
+                <i class="fas fa-euro-sign"></i>
+            </div>
+            <div class="dashboard-card-title">Spesa Totale</div>
+            <div class="dashboard-card-value">€@Model.TotalCost</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card">
+            <div class="dashboard-card-icon bg-info text-white">
+                <i class="fas fa-leaf"></i>
+            </div>
+            <div class="dashboard-card-title">Punti Eco</div>
+            <div class="dashboard-card-value">@Model.TotalEcoPoints</div>
+        </div>
+    </div>
+</div>
+
+<!-- Trip Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-3">
+                <label for="tripStatus" class="form-label">Stato</label>
+                <select id="tripStatus" class="form-control" onchange="filterTrips()">
+                    <option value="">Tutti</option>
+                    <option value="0">In corso</option>
+                    <option value="1">Completate</option>
+                    <option value="2">Annullate</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="vehicleType" class="form-label">Tipo Mezzo</label>
+                <select id="vehicleType" class="form-control" onchange="filterTrips()">
+                    <option value="">Tutti</option>
+                    <option value="0">Biciclette</option>
+                    <option value="1">E-Bike</option>
+                    <option value="2">Scooter</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="dateRange" class="form-label">Periodo</label>
+                <select id="dateRange" class="form-control" onchange="filterTrips()">
+                    <option value="">Tutti</option>
+                    <option value="today">Oggi</option>
+                    <option value="week">Questa settimana</option>
+                    <option value="month">Questo mese</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" onclick="refreshTrips()">
+                        <i class="fas fa-sync-alt"></i> Aggiorna
+                    </button>
+                    <button class="btn btn-outline-success" onclick="exportTrips()">
+                        <i class="fas fa-download"></i> Esporta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trips List -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list text-primary"></i>
+            Storico Corse
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (Model.Trips.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Data/Ora</th>
+                            <th>Mezzo</th>
+                            <th>Percorso</th>
+                            <th>Durata</th>
+                            <th>Costo</th>
+                            <th>Stato</th>
+                            <th>Punti Eco</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tripsTableBody">
+                        @foreach (var trip in Model.Trips)
+                        {
+                            <tr class="trip-row" 
+                                data-status="@((int)trip.Stato)" 
+                                data-vehicle-type="@((int)(trip.Mezzo?.Tipo ?? VehicleType.Bicicletta))" 
+                                data-date="@trip.Inizio.ToString("yyyy-MM-dd")">
+                                <td>
+                                    <div class="fw-bold">@trip.Inizio.ToString("dd/MM/yyyy")</div>
+                                    <small class="text-muted">@trip.Inizio.ToString("HH:mm")</small>
+                                </td>
+                                <td>
+                                    @if (trip.Mezzo != null)
+                                    {
+                                        var vehicleIcon = trip.Mezzo.Tipo switch
+                                        {
+                                            VehicleType.Bicicletta => "fas fa-bicycle",
+                                            VehicleType.EBike => "fas fa-bicycle",
+                                            VehicleType.Scooter => "fas fa-motorcycle",
+                                            _ => "fas fa-bicycle"
+                                        };
+                                        
+                                        <i class="@vehicleIcon me-1"></i>
+                                        <div class="fw-bold">@trip.Mezzo.Modello</div>
+                                        <small class="text-muted">@trip.Mezzo.Tipo</small>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="route-info">
+                                        <div class="fw-bold">
+                                            <i class="fas fa-map-marker-alt text-success me-1"></i>
+                                            @trip.ParcheggioPartenza?.Nome
+                                        </div>
+                                        @if (trip.ParcheggioDestinazione != null)
+                                        {
+                                            <div class="mt-1">
+                                                <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                                @trip.ParcheggioDestinazione.Nome
+                                            </div>
+                                        }
+                                        else if (trip.Stato == TripStatus.InCorso)
+                                        {
+                                            <small class="text-muted">In corso...</small>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">@trip.DurataMinuti min</div>
+                                    @if (trip.Fine.HasValue)
+                                    {
+                                        <small class="text-muted">@trip.Fine.Value.ToString("HH:mm")</small>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-primary">€@trip.CostoTotale</div>
+                                </td>
+                                <td>
+                                    @{
+                                        var statusClass = trip.Stato switch
+                                        {
+                                            TripStatus.InCorso => "badge bg-warning",
+                                            TripStatus.Completata => "badge bg-success",
+                                            TripStatus.Annullata => "badge bg-secondary",
+                                            _ => "badge bg-secondary"
+                                        };
+                                    }
+                                    <span class="@statusClass">@trip.Stato</span>
+                                </td>
+                                <td>
+                                    @if (trip.PuntiEcoAssegnati.HasValue && trip.PuntiEcoAssegnati > 0)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-leaf"></i> @trip.PuntiEcoAssegnati
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="showTripDetails(@trip.Id)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        @if (trip.Stato == TripStatus.InCorso)
+                                        {
+                                            <button class="btn btn-outline-danger btn-sm" onclick="endTrip(@trip.Id)">
+                                                <i class="fas fa-stop"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-route fa-3x text-muted mb-3"></i>
+                <h4>Nessuna corsa effettuata</h4>
+                <p class="text-muted">Quando inizierai a usare i nostri mezzi, qui apparirà lo storico delle tue corse</p>
+                <a href="/Vehicles" class="btn btn-primary">
+                    <i class="fas fa-bicycle"></i> Inizia la tua prima corsa
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Trip Details Modal -->
+<div class="modal fade" id="tripDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dettagli Corsa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="tripDetailsContent">
+                <!-- Trip details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function filterTrips() {
+            const statusFilter = document.getElementById('tripStatus').value;
+            const vehicleTypeFilter = document.getElementById('vehicleType').value;
+            const dateFilter = document.getElementById('dateRange').value;
+            
+            const rows = document.querySelectorAll('.trip-row');
+            
+            rows.forEach(row => {
+                let show = true;
+                
+                if (statusFilter && row.getAttribute('data-status') !== statusFilter) {
+                    show = false;
+                }
+                
+                if (vehicleTypeFilter && row.getAttribute('data-vehicle-type') !== vehicleTypeFilter) {
+                    show = false;
+                }
+                
+                if (dateFilter) {
+                    const rowDate = new Date(row.getAttribute('data-date'));
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    switch(dateFilter) {
+                        case 'today':
+                            if (rowDate < today) show = false;
+                            break;
+                        case 'week':
+                            const weekAgo = new Date(today);
+                            weekAgo.setDate(weekAgo.getDate() - 7);
+                            if (rowDate < weekAgo) show = false;
+                            break;
+                        case 'month':
+                            const monthAgo = new Date(today);
+                            monthAgo.setMonth(monthAgo.getMonth() - 1);
+                            if (rowDate < monthAgo) show = false;
+                            break;
+                    }
+                }
+                
+                row.style.display = show ? 'table-row' : 'none';
+            });
+        }
+
+        function refreshTrips() {
+            window.location.reload();
+        }
+
+        function exportTrips() {
+            // This would generate and download a CSV/PDF report
+            app.showAlert('Funzione di esportazione non ancora implementata', 'info');
+        }
+
+        async function showTripDetails(tripId) {
+            const modal = new bootstrap.Modal(document.getElementById('tripDetailsModal'));
+            const content = document.getElementById('tripDetailsContent');
+            
+            content.innerHTML = '<div class="text-center"><div class="spinner"></div> Caricamento...</div>';
+            modal.show();
+
+            try {
+                const response = await fetch(`/api/trips/${tripId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${app.getToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    const trip = await response.json();
+                    content.innerHTML = `
+                        <div class="trip-details">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Informazioni Generali</h6>
+                                    <p><strong>Data inizio:</strong> ${new Date(trip.inizio).toLocaleString()}</p>
+                                    ${trip.fine ? `<p><strong>Data fine:</strong> ${new Date(trip.fine).toLocaleString()}</p>` : ''}
+                                    <p><strong>Durata:</strong> ${trip.durataMinuti} minuti</p>
+                                    <p><strong>Costo:</strong> €${trip.costoTotale}</p>
+                                    <p><strong>Stato:</strong> ${trip.stato}</p>
+                                    ${trip.puntiEcoAssegnati ? `<p><strong>Punti Eco:</strong> ${trip.puntiEcoAssegnati}</p>` : ''}
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Mezzo Utilizzato</h6>
+                                    <p><strong>Modello:</strong> ${trip.mezzo?.modello || 'N/A'}</p>
+                                    <p><strong>Tipo:</strong> ${trip.mezzo?.tipo || 'N/A'}</p>
+                                    <p><strong>Elettrico:</strong> ${trip.mezzo?.isElettrico ? 'Sì' : 'No'}</p>
+                                    
+                                    <h6>Percorso</h6>
+                                    <p><strong>Partenza:</strong> ${trip.parcheggioPartenza?.nome || 'N/A'}</p>
+                                    ${trip.parcheggioDestinazione ? `<p><strong>Destinazione:</strong> ${trip.parcheggioDestinazione.nome}</p>` : '<p><strong>Destinazione:</strong> In corso</p>'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei dettagli</div>';
+                }
+            } catch (error) {
+                console.error('Error loading trip details:', error);
+                content.innerHTML = '<div class="alert alert-danger">Errore di connessione</div>';
+            }
+        }
+
+        async function endTrip(tripId) {
+            if (!confirm('Sei sicuro di voler terminare questa corsa?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/trips/${tripId}/end`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${app.getToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    app.showAlert('Corsa terminata con successo!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    app.showAlert('Errore durante la terminazione della corsa', 'danger');
+                }
+            } catch (error) {
+                console.error('Error ending trip:', error);
+                app.showAlert('Errore di connessione', 'danger');
+            }
+        }
+    </script>
+}

@@ -1,0 +1,447 @@
+@page
+@model SharingMezzi.Web.Pages.Admin.UsersModel
+@using SharingMezzi.Web.Models
+@{
+    ViewData["Title"] = "Gestione Utenti";
+}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Gestione Utenti</h1>
+            <p class="text-muted">Visualizza e gestisci tutti gli utenti della piattaforma</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+            <i class="fas fa-plus me-2"></i>
+            Nuovo Utente
+        </button>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h3 class="mb-0">@Model.TotalUsers</h3>
+                        <p class="text-muted mb-0">Utenti Totali</p>
+                    </div>
+                    <div class="stat-icon bg-primary">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h3 class="mb-0">@Model.ActiveUsers</h3>
+                        <p class="text-muted mb-0">Utenti Attivi</p>
+                    </div>
+                    <div class="stat-icon bg-success">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h3 class="mb-0">@Model.AdminUsers</h3>
+                        <p class="text-muted mb-0">Amministratori</p>
+                    </div>
+                    <div class="stat-icon bg-warning">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h3 class="mb-0">@Model.NewUsersToday</h3>
+                        <p class="text-muted mb-0">Nuovi Oggi</p>
+                    </div>
+                    <div class="stat-icon bg-info">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <label class="form-label">Cerca Utente</label>
+                <input type="text" class="form-control" id="searchUser" placeholder="Nome, email o ID...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Ruolo</label>
+                <select class="form-select" id="roleFilter">
+                    <option value="">Tutti i ruoli</option>
+                    <option value="Admin">Amministratore</option>
+                    <option value="User">Utente</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Stato</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tutti gli stati</option>
+                    <option value="true">Attivo</option>
+                    <option value="false">Disattivo</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Data Registrazione</label>
+                <input type="date" class="form-control" id="dateFilter">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Elenco Utenti</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Utente</th>
+                        <th>Email</th>
+                        <th>Ruolo</th>
+                        <th>Stato</th>
+                        <th>Saldo</th>
+                        <th>Corse</th>
+                        <th>Registrato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="user-avatar me-3">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">@user.FirstName @user.LastName</h6>
+                                        <small class="text-muted">ID: @user.Id</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>@user.Email</td>
+                            <td>
+                                <span class="badge bg-@(user.Role == "Admin" ? "warning" : "primary")">
+                                    @user.Role
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-@(user.IsActive ? "success" : "secondary")">
+                                    @(user.IsActive ? "Attivo" : "Disattivo")
+                                </span>
+                            </td>
+                            <td>€@user.Balance.ToString("F2")</td>
+                            <td>@user.TotalTrips</td>
+                            <td>@user.CreatedAt.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="viewUser(@user.Id)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="editUser(@user.Id)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-@(user.IsActive ? "warning" : "success")" 
+                                            onclick="toggleUser(@user.Id, @user.IsActive.ToString().ToLower())">
+                                        <i class="fas fa-@(user.IsActive ? "ban" : "check")"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal fade" id="createUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuovo Utente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createUserForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nome <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="firstName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Cognome <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="lastName" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ruolo</label>
+                        <select class="form-select" name="role">
+                            <option value="User">Utente</option>
+                            <option value="Admin">Amministratore</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Saldo Iniziale</label>
+                        <input type="number" class="form-control" name="balance" value="0" min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Crea Utente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- User Details Modal -->
+<div class="modal fade" id="userDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dettagli Utente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="userDetailsContent">
+                <!-- User details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        class AdminUsersManager {
+            constructor() {
+                this.initializeFilters();
+                this.setupEventListeners();
+            }
+
+            initializeFilters() {
+                // Search filter
+                document.getElementById('searchUser').addEventListener('input', (e) => {
+                    this.filterUsers();
+                });
+
+                // Role filter
+                document.getElementById('roleFilter').addEventListener('change', (e) => {
+                    this.filterUsers();
+                });
+
+                // Status filter
+                document.getElementById('statusFilter').addEventListener('change', (e) => {
+                    this.filterUsers();
+                });
+
+                // Date filter
+                document.getElementById('dateFilter').addEventListener('change', (e) => {
+                    this.filterUsers();
+                });
+            }
+
+            setupEventListeners() {
+                // Create user form
+                document.getElementById('createUserForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.createUser();
+                });
+            }
+
+            filterUsers() {
+                const search = document.getElementById('searchUser').value.toLowerCase();
+                const role = document.getElementById('roleFilter').value;
+                const status = document.getElementById('statusFilter').value;
+                const date = document.getElementById('dateFilter').value;
+
+                const rows = document.querySelectorAll('#usersTableBody tr');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    const userRole = row.querySelector('.badge').textContent.trim();
+                    const userStatus = row.querySelector('.badge:nth-of-type(2)').textContent.trim();
+                    
+                    let showRow = true;
+
+                    if (search && !text.includes(search)) {
+                        showRow = false;
+                    }
+
+                    if (role && userRole !== role) {
+                        showRow = false;
+                    }
+
+                    if (status && 
+                        ((status === 'true' && userStatus !== 'Attivo') || 
+                         (status === 'false' && userStatus !== 'Disattivo'))) {
+                        showRow = false;
+                    }
+
+                    row.style.display = showRow ? '' : 'none';
+                });
+            }
+
+            async createUser() {
+                const form = document.getElementById('createUserForm');
+                const formData = new FormData(form);
+                
+                const userData = {
+                    firstName: formData.get('firstName'),
+                    lastName: formData.get('lastName'),
+                    email: formData.get('email'),
+                    password: formData.get('password'),
+                    role: formData.get('role'),
+                    balance: parseFloat(formData.get('balance')) || 0
+                };
+
+                try {
+                    const response = await fetch('/api/utenti', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify(userData)
+                    });
+
+                    if (response.ok) {
+                        showAlert('Utente creato con successo!', 'success');
+                        bootstrap.Modal.getInstance(document.getElementById('createUserModal')).hide();
+                        location.reload();
+                    } else {
+                        const error = await response.json();
+                        showAlert(error.message || 'Errore durante la creazione dell\'utente', 'error');
+                    }
+                } catch (error) {
+                    showAlert('Errore di connessione', 'error');
+                }
+            }
+
+            async viewUser(userId) {
+                try {
+                    const response = await fetch(`/api/utenti/${userId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const user = await response.json();
+                        this.showUserDetails(user);
+                    } else {
+                        showAlert('Errore nel caricamento dei dettagli utente', 'error');
+                    }
+                } catch (error) {
+                    showAlert('Errore di connessione', 'error');
+                }
+            }
+
+            showUserDetails(user) {
+                const content = document.getElementById('userDetailsContent');
+                content.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Informazioni Personali</h6>
+                            <p><strong>Nome:</strong> ${user.firstName} ${user.lastName}</p>
+                            <p><strong>Email:</strong> ${user.email}</p>
+                            <p><strong>Ruolo:</strong> ${user.role}</p>
+                            <p><strong>Stato:</strong> ${user.isActive ? 'Attivo' : 'Disattivo'}</p>
+                            <p><strong>Registrato:</strong> ${new Date(user.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Statistiche</h6>
+                            <p><strong>Saldo:</strong> €${user.balance.toFixed(2)}</p>
+                            <p><strong>Corse Totali:</strong> ${user.totalTrips}</p>
+                            <p><strong>Ultimo Accesso:</strong> ${user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Mai'}</p>
+                        </div>
+                    </div>
+                `;
+                
+                const modal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
+                modal.show();
+            }
+
+            async toggleUser(userId, isActive) {
+                const action = isActive ? 'disattivare' : 'attivare';
+                if (!confirm(`Sei sicuro di voler ${action} questo utente?`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/utenti/${userId}/toggle`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        showAlert(`Utente ${isActive ? 'disattivato' : 'attivato'} con successo!`, 'success');
+                        location.reload();
+                    } else {
+                        showAlert('Errore durante l\'operazione', 'error');
+                    }
+                } catch (error) {
+                    showAlert('Errore di connessione', 'error');
+                }
+            }
+
+            async editUser(userId) {
+                // Redirect to edit page or show edit modal
+                window.location.href = `/Admin/EditUser/${userId}`;
+            }
+        }
+
+        // Global functions for inline onclick events
+        window.viewUser = (userId) => usersManager.viewUser(userId);
+        window.editUser = (userId) => usersManager.editUser(userId);
+        window.toggleUser = (userId, isActive) => usersManager.toggleUser(userId, isActive);
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.usersManager = new AdminUsersManager();
+        });
+    </script>
+}

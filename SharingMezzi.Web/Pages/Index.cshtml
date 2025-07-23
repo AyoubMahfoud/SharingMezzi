@@ -1,0 +1,343 @@
+@page
+@model SharingMezzi.Web.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Panoramica delle tue attività</p>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="dashboard-card">
+            <div class="dashboard-card-icon bg-primary text-white">
+                <i class="fas fa-bicycle"></i>
+            </div>
+            <div class="dashboard-card-title">Mezzi Disponibili</div>
+            <div class="dashboard-card-value">@Model.AvailableVehicles</div>
+            <div class="dashboard-card-change positive">
+                <i class="fas fa-arrow-up"></i>
+                <span>+5 rispetto a ieri</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="dashboard-card">
+            <div class="dashboard-card-icon bg-success text-white">
+                <i class="fas fa-route"></i>
+            </div>
+            <div class="dashboard-card-title">Corse Totali</div>
+            <div class="dashboard-card-value">@Model.TotalTrips</div>
+            <div class="dashboard-card-change positive">
+                <i class="fas fa-arrow-up"></i>
+                <span>+12% questo mese</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="dashboard-card">
+            <div class="dashboard-card-icon bg-warning text-white">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <div class="dashboard-card-title">Saldo Corrente</div>
+            <div class="dashboard-card-value">€@Model.CurrentBalance</div>
+            <div class="dashboard-card-change negative">
+                <i class="fas fa-arrow-down"></i>
+                <span>-€5.50 ultima corsa</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="dashboard-card">
+            <div class="dashboard-card-icon bg-info text-white">
+                <i class="fas fa-leaf"></i>
+            </div>
+            <div class="dashboard-card-title">Punti Eco</div>
+            <div class="dashboard-card-value">@Model.EcoPoints</div>
+            <div class="dashboard-card-change positive">
+                <i class="fas fa-arrow-up"></i>
+                <span>+15 punti</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt text-primary"></i>
+                    Azioni Rapide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="/Vehicles" class="btn btn-outline-primary btn-block h-100">
+                            <i class="fas fa-bicycle d-block mb-2" style="font-size: 2rem;"></i>
+                            <span>Trova Mezzo</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="/Parking" class="btn btn-outline-success btn-block h-100">
+                            <i class="fas fa-parking d-block mb-2" style="font-size: 2rem;"></i>
+                            <span>Parcheggi</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="/Billing" class="btn btn-outline-warning btn-block h-100">
+                            <i class="fas fa-credit-card d-block mb-2" style="font-size: 2rem;"></i>
+                            <span>Ricarica</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="/Trips" class="btn btn-outline-info btn-block h-100">
+                            <i class="fas fa-history d-block mb-2" style="font-size: 2rem;"></i>
+                            <span>Storico</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity & Map -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-map-marked-alt text-primary"></i>
+                    Mappa Mezzi e Parcheggi
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="map" style="height: 400px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <div class="text-center">
+                        <i class="fas fa-map fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Mappa interattiva in caricamento...</p>
+                        <small class="text-muted">Qui verrà mostrata la mappa con i mezzi disponibili e i parcheggi nelle vicinanze</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock text-primary"></i>
+                    Attività Recenti
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (Model.RecentTrips.Any())
+                {
+                    <div class="timeline">
+                        @foreach (var trip in Model.RecentTrips.Take(5))
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-marker">
+                                    <i class="fas fa-bicycle"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h6 class="timeline-title">@trip.Mezzo?.Modello</h6>
+                                    <p class="timeline-text">
+                                        Da @trip.ParcheggioPartenza?.Nome
+                                        @if (trip.ParcheggioDestinazione != null)
+                                        {
+                                            <text> a @trip.ParcheggioDestinazione.Nome</text>
+                                        }
+                                    </p>
+                                    <small class="text-muted">
+                                        @trip.Inizio.ToString("dd/MM/yyyy HH:mm") - 
+                                        Durata: @trip.DurataMinuti min - 
+                                        Costo: €@trip.CostoTotale
+                                    </small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Nessuna attività recente</p>
+                        <a href="/Vehicles" class="btn btn-primary btn-sm">
+                            <i class="fas fa-bicycle"></i> Inizia la tua prima corsa
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Weather Widget -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cloud-sun text-primary"></i>
+                    Condizioni Meteo
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="weather-widget">
+                    <div class="weather-icon">
+                        <i class="fas fa-sun fa-3x text-warning"></i>
+                    </div>
+                    <div class="weather-temp">22°C</div>
+                    <div class="weather-desc">Soleggiato</div>
+                    <div class="weather-details">
+                        <div class="row">
+                            <div class="col">
+                                <small class="text-muted">Vento</small>
+                                <div>15 km/h</div>
+                            </div>
+                            <div class="col">
+                                <small class="text-muted">Umidità</small>
+                                <div>65%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Dashboard specific scripts
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load real-time data
+            loadDashboardData();
+            
+            // Initialize map (placeholder)
+            initializeMap();
+            
+            // Refresh data every 30 seconds
+            setInterval(loadDashboardData, 30000);
+        });
+        
+        function loadDashboardData() {
+            // Fetch updated dashboard data
+            fetch('/api/dashboard/stats', {
+                headers: {
+                    'Authorization': `Bearer ${app.getToken()}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Update dashboard cards with real data
+                console.log('Dashboard data loaded:', data);
+            })
+            .catch(error => console.error('Error loading dashboard data:', error));
+        }
+        
+        function initializeMap() {
+            // Initialize OpenStreetMap (placeholder)
+            const mapElement = document.getElementById('map');
+            if (mapElement) {
+                // Here you would initialize OpenStreetMap with Leaflet
+                // For now, we'll just add a placeholder
+                setTimeout(() => {
+                    mapElement.innerHTML = `
+                        <div class="text-center">
+                            <i class="fas fa-map fa-3x text-primary mb-3"></i>
+                            <p class="text-primary">Mappa OpenStreetMap</p>
+                            <small class="text-muted">Integrazione con OpenStreetMap sarà implementata qui</small>
+                        </div>
+                    `;
+                }, 2000);
+            }
+        }
+    </script>
+    
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 1rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e9ecef;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        
+        .timeline-marker {
+            position: absolute;
+            left: -2rem;
+            width: 2rem;
+            height: 2rem;
+            background: #007bff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+        
+        .timeline-title {
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+        }
+        
+        .timeline-text {
+            margin-bottom: 0.25rem;
+            color: #6c757d;
+        }
+        
+        .weather-widget {
+            text-align: center;
+        }
+        
+        .weather-temp {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .weather-desc {
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+        
+        .weather-details {
+            font-size: 0.9rem;
+        }
+        
+        .btn-block {
+            width: 100%;
+            text-align: center;
+            padding: 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-block:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+}

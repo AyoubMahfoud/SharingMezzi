@@ -1,0 +1,192 @@
+@page
+@model SharingMezzi.Web.Pages.RegisterModel
+@{
+    ViewData["Title"] = "Registrazione";
+    ViewData["BodyClass"] = "auth-page";
+    Layout = "_AuthLayout";
+}
+
+<div class="auth-card">
+    <div class="auth-header">
+        <div class="auth-logo">
+            <i class="fas fa-bicycle"></i>
+        </div>
+        <h1 class="auth-title">Registrati</h1>
+        <p class="auth-subtitle">Crea il tuo account SharingMezzi</p>
+    </div>
+
+    <form id="registerForm" class="auth-form" method="post">
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger mb-3" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i> @Model.ErrorMessage
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+        {
+            <div class="alert alert-success mb-3" role="alert">
+                <i class="fas fa-check-circle me-2"></i> @Model.SuccessMessage
+            </div>
+        }
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="nome" class="form-label">Nome</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <input type="text" class="form-control" id="Nome" asp-for="RegisterRequest.Nome" 
+                               placeholder="Il tuo nome" required>
+                    </div>
+                    <span asp-validation-for="RegisterRequest.Nome" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="cognome" class="form-label">Cognome</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <input type="text" class="form-control" id="Cognome" asp-for="RegisterRequest.Cognome" 
+                               placeholder="Il tuo cognome" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="Email" class="form-label">Email</label>
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="fas fa-envelope"></i>
+                </span>
+                <input type="email" class="form-control" id="Email" asp-for="RegisterRequest.Email" 
+                       placeholder="La tua email" required>
+            </div>
+            <span asp-validation-for="RegisterRequest.Email" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="Telefono" class="form-label">Telefono (opzionale)</label>
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="fas fa-phone"></i>
+                </span>
+                <input type="tel" class="form-control" id="Telefono" asp-for="RegisterRequest.Telefono" 
+                       placeholder="Il tuo numero di telefono">
+            </div>
+            <span asp-validation-for="RegisterRequest.Telefono" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="Password" class="form-label">Password</label>
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="fas fa-lock"></i>
+                </span>
+                <input type="password" class="form-control" id="Password" asp-for="RegisterRequest.Password" 
+                       placeholder="Scegli una password sicura" required>
+            </div>
+            <div class="password-strength">
+                <div class="password-strength-bar">
+                    <div class="password-strength-fill"></div>
+                </div>
+                <div class="password-strength-text">Inserisci una password</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="ConfirmPassword" class="form-label">Conferma Password</label>
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="fas fa-lock"></i>
+                </span>
+                <input type="password" class="form-control" id="ConfirmPassword" asp-for="RegisterRequest.ConfirmPassword" 
+                       placeholder="Conferma la tua password" required>
+            </div>
+            <span asp-validation-for="RegisterRequest.ConfirmPassword" class="text-danger"></span>
+        </div>
+
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="acceptTerms" asp-for="RegisterRequest.AcceptTerms" required>
+            <label class="form-check-label" for="terms">
+                Accetto i <a href="/Terms" class="auth-link">Termini di Servizio</a> e la 
+                <a href="/Privacy" class="auth-link">Privacy Policy</a>
+            </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-auth">
+            <i class="fas fa-user-plus"></i> Registrati
+        </button>
+        
+        <div class="loading">
+            <div class="spinner"></div>
+            <span>Registrazione in corso...</span>
+        </div>
+    </form>
+
+    <div class="auth-links">
+        <p>
+            Hai già un account? 
+            <a href="/Login" class="auth-link">
+                <i class="fas fa-sign-in-alt"></i> Accedi
+            </a>
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Additional register page specific scripts
+        document.addEventListener('DOMContentLoaded', function() {
+            // Focus on first name input
+            document.getElementById('nome').focus();
+            
+            // Handle form validation
+            const form = document.getElementById('registerForm');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+            const phoneInput = document.getElementById('telefono');
+            
+            form.addEventListener('submit', function(e) {
+                if (!authManager.isValidEmail(emailInput.value)) {
+                    e.preventDefault();
+                    authManager.showError('Inserisci un indirizzo email valido');
+                    return;
+                }
+                
+                if (!authManager.isValidPassword(passwordInput.value)) {
+                    e.preventDefault();
+                    authManager.showError('La password deve contenere almeno 6 caratteri');
+                    return;
+                }
+                
+                if (passwordInput.value !== confirmPasswordInput.value) {
+                    e.preventDefault();
+                    authManager.showError('Le password non corrispondono');
+                    return;
+                }
+                
+                if (phoneInput.value && !authManager.isValidPhone(phoneInput.value)) {
+                    e.preventDefault();
+                    authManager.showError('Inserisci un numero di telefono valido');
+                    return;
+                }
+            });
+            
+            // Real-time password confirmation validation
+            confirmPasswordInput.addEventListener('input', function() {
+                if (this.value && this.value !== passwordInput.value) {
+                    this.setCustomValidity('Le password non corrispondono');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+        });
+    </script>
+}

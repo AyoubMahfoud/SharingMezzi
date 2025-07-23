@@ -1,0 +1,488 @@
+@page
+@model SharingMezzi.Web.Pages.MapModel
+@{
+    ViewData["Title"] = "Mappa Mezzi";
+}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Mappa Mezzi</h1>
+            <p class="text-muted">Visualizza la posizione dei mezzi e parcheggi in tempo reale</p>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" onclick="refreshMap()">
+                <i class="fas fa-sync-alt me-2"></i>
+                Aggiorna
+            </button>
+            <button class="btn btn-outline-secondary" onclick="showMyLocation()">
+                <i class="fas fa-location-arrow me-2"></i>
+                La mia posizione
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Map Controls -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-3">
+                <label class="form-label">Filtro Mezzi</label>
+                <select class="form-select" id="vehicleFilter">
+                    <option value="">Tutti i mezzi</option>
+                    <option value="Bicicletta">Biciclette</option>
+                    <option value="Scooter">Scooter</option>
+                    <option value="Auto">Auto</option>
+                    <option value="Monopattino">Monopattini</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Stato</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tutti gli stati</option>
+                    <option value="Disponibile">Disponibili</option>
+                    <option value="InUso">In uso</option>
+                    <option value="Manutenzione">Manutenzione</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Raggio (km)</label>
+                <input type="range" class="form-range" id="radiusFilter" min="1" max="10" value="5">
+                <small class="text-muted">Raggio: <span id="radiusValue">5</span> km</small>
+            </div>
+            <div class="col-md-3">
+                <div class="form-check mt-4">
+                    <input class="form-check-input" type="checkbox" id="showParkings" checked>
+                    <label class="form-check-label" for="showParkings">
+                        Mostra parcheggi
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="showTraffic">
+                    <label class="form-check-label" for="showTraffic">
+                        Mostra traffico
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Map Container -->
+<div class="card">
+    <div class="card-body p-0">
+        <div id="map" style="height: 600px; width: 100%;"></div>
+    </div>
+</div>
+
+<!-- Map Legend -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Legenda</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="legend-item">
+                    <i class="fas fa-circle text-success me-2"></i>
+                    <span>Mezzo disponibile</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="legend-item">
+                    <i class="fas fa-circle text-warning me-2"></i>
+                    <span>Mezzo in uso</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="legend-item">
+                    <i class="fas fa-circle text-danger me-2"></i>
+                    <span>Mezzo in manutenzione</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="legend-item">
+                    <i class="fas fa-square text-primary me-2"></i>
+                    <span>Parcheggio</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vehicle Info Modal -->
+<div class="modal fade" id="vehicleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dettagli Mezzo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="vehicleModalBody">
+                <!-- Vehicle details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                <button type="button" class="btn btn-primary" id="unlockVehicleBtn">Sblocca Mezzo</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        class MapManager {
+            constructor() {
+                this.map = null;
+                this.vehicleMarkers = [];
+                this.parkingMarkers = [];
+                this.userLocation = null;
+                this.initializeMap();
+                this.setupEventListeners();
+            }
+
+            initializeMap() {
+                // Initialize map centered on Milan
+                this.map = L.map('map').setView([45.4642, 9.1900], 13);
+
+                // Add OpenStreetMap tile layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(this.map);
+
+                // Load initial data
+                this.loadVehicles();
+                this.loadParkings();
+            }
+
+            setupEventListeners() {
+                // Filter events
+                document.getElementById('vehicleFilter').addEventListener('change', () => {
+                    this.applyFilters();
+                });
+
+                document.getElementById('statusFilter').addEventListener('change', () => {
+                    this.applyFilters();
+                });
+
+                document.getElementById('radiusFilter').addEventListener('input', (e) => {
+                    document.getElementById('radiusValue').textContent = e.target.value;
+                    this.applyFilters();
+                });
+
+                document.getElementById('showParkings').addEventListener('change', () => {
+                    this.toggleParkings();
+                });
+
+                document.getElementById('showTraffic').addEventListener('change', () => {
+                    this.toggleTraffic();
+                });
+
+                // Modal events
+                document.getElementById('unlockVehicleBtn').addEventListener('click', () => {
+                    this.unlockVehicle();
+                });
+            }
+
+            async loadVehicles() {
+                try {
+                    // Mock data for demonstration
+                    const mockVehicles = [
+                        { id: 1, tipo: 'Bicicletta', modello: 'City Bike', stato: 'Disponibile', lat: 45.4642, lng: 9.1900, batteria: 85 },
+                        { id: 2, tipo: 'Scooter', modello: 'Electric Scooter', stato: 'Disponibile', lat: 45.4652, lng: 9.1910, batteria: 92 },
+                        { id: 3, tipo: 'Auto', modello: 'Smart Car', stato: 'InUso', lat: 45.4632, lng: 9.1890, batteria: 78 },
+                        { id: 4, tipo: 'Monopattino', modello: 'E-Scooter', stato: 'Disponibile', lat: 45.4672, lng: 9.1920, batteria: 56 },
+                        { id: 5, tipo: 'Bicicletta', modello: 'Mountain Bike', stato: 'Manutenzione', lat: 45.4612, lng: 9.1880, batteria: 0 }
+                    ];
+
+                    this.addVehicleMarkers(mockVehicles);
+                } catch (error) {
+                    console.error('Error loading vehicles:', error);
+                    showAlert('Errore nel caricamento dei mezzi', 'error');
+                }
+            }
+
+            async loadParkings() {
+                try {
+                    // Mock data for demonstration
+                    const mockParkings = [
+                        { id: 1, nome: 'Parcheggio Centro', indirizzo: 'Via Roma, 123', lat: 45.4642, lng: 9.1900, postiLiberi: 15, capienza: 30 },
+                        { id: 2, nome: 'Parcheggio Stazione', indirizzo: 'Piazza Centrale, 45', lat: 45.4682, lng: 9.1950, postiLiberi: 8, capienza: 20 },
+                        { id: 3, nome: 'Parcheggio Università', indirizzo: 'Via Università, 67', lat: 45.4602, lng: 9.1850, postiLiberi: 22, capienza: 40 }
+                    ];
+
+                    this.addParkingMarkers(mockParkings);
+                } catch (error) {
+                    console.error('Error loading parkings:', error);
+                    showAlert('Errore nel caricamento dei parcheggi', 'error');
+                }
+            }
+
+            addVehicleMarkers(vehicles) {
+                vehicles.forEach(vehicle => {
+                    const icon = this.getVehicleIcon(vehicle.tipo, vehicle.stato);
+                    const marker = L.marker([vehicle.lat, vehicle.lng], { icon: icon })
+                        .addTo(this.map)
+                        .bindPopup(`
+                            <div class="vehicle-popup">
+                                <h6>${vehicle.modello}</h6>
+                                <p>Tipo: ${vehicle.tipo}</p>
+                                <p>Stato: ${vehicle.stato}</p>
+                                <p>Batteria: ${vehicle.batteria}%</p>
+                                <button class="btn btn-sm btn-primary" onclick="showVehicleDetails(${vehicle.id})">
+                                    Dettagli
+                                </button>
+                            </div>
+                        `);
+                    
+                    marker.vehicleData = vehicle;
+                    this.vehicleMarkers.push(marker);
+                });
+            }
+
+            addParkingMarkers(parkings) {
+                parkings.forEach(parking => {
+                    const icon = this.getParkingIcon(parking.postiLiberi, parking.capienza);
+                    const marker = L.marker([parking.lat, parking.lng], { icon: icon })
+                        .addTo(this.map)
+                        .bindPopup(`
+                            <div class="parking-popup">
+                                <h6>${parking.nome}</h6>
+                                <p>${parking.indirizzo}</p>
+                                <p>Posti liberi: ${parking.postiLiberi}/${parking.capienza}</p>
+                                <button class="btn btn-sm btn-info" onclick="showParkingDetails(${parking.id})">
+                                    Dettagli
+                                </button>
+                            </div>
+                        `);
+                    
+                    marker.parkingData = parking;
+                    this.parkingMarkers.push(marker);
+                });
+            }
+
+            getVehicleIcon(tipo, stato) {
+                let iconClass = 'fas fa-bicycle';
+                switch (tipo) {
+                    case 'Scooter': iconClass = 'fas fa-motorcycle'; break;
+                    case 'Auto': iconClass = 'fas fa-car'; break;
+                    case 'Monopattino': iconClass = 'fas fa-skating'; break;
+                }
+
+                let color = '#28a745'; // green for available
+                switch (stato) {
+                    case 'InUso': color = '#ffc107'; break; // yellow for in use
+                    case 'Manutenzione': color = '#dc3545'; break; // red for maintenance
+                }
+
+                return L.divIcon({
+                    html: `<i class="${iconClass}" style="color: ${color}; font-size: 20px;"></i>`,
+                    iconSize: [30, 30],
+                    className: 'vehicle-icon'
+                });
+            }
+
+            getParkingIcon(postiLiberi, capienza) {
+                const occupancyRate = (capienza - postiLiberi) / capienza;
+                let color = '#007bff'; // blue
+                if (occupancyRate > 0.8) color = '#dc3545'; // red if almost full
+                else if (occupancyRate > 0.6) color = '#ffc107'; // yellow if getting full
+
+                return L.divIcon({
+                    html: `<i class="fas fa-parking" style="color: ${color}; font-size: 20px;"></i>`,
+                    iconSize: [30, 30],
+                    className: 'parking-icon'
+                });
+            }
+
+            applyFilters() {
+                const vehicleType = document.getElementById('vehicleFilter').value;
+                const status = document.getElementById('statusFilter').value;
+                const radius = parseFloat(document.getElementById('radiusFilter').value);
+
+                this.vehicleMarkers.forEach(marker => {
+                    const vehicle = marker.vehicleData;
+                    let show = true;
+
+                    if (vehicleType && vehicle.tipo !== vehicleType) show = false;
+                    if (status && vehicle.stato !== status) show = false;
+                    
+                    if (this.userLocation) {
+                        const distance = this.calculateDistance(
+                            this.userLocation.lat, this.userLocation.lng,
+                            vehicle.lat, vehicle.lng
+                        );
+                        if (distance > radius) show = false;
+                    }
+
+                    if (show) {
+                        marker.addTo(this.map);
+                    } else {
+                        this.map.removeLayer(marker);
+                    }
+                });
+            }
+
+            toggleParkings() {
+                const showParkings = document.getElementById('showParkings').checked;
+                this.parkingMarkers.forEach(marker => {
+                    if (showParkings) {
+                        marker.addTo(this.map);
+                    } else {
+                        this.map.removeLayer(marker);
+                    }
+                });
+            }
+
+            toggleTraffic() {
+                // This would integrate with a traffic layer API
+                const showTraffic = document.getElementById('showTraffic').checked;
+                if (showTraffic) {
+                    showAlert('Funzionalità traffico in arrivo!', 'info');
+                }
+            }
+
+            calculateDistance(lat1, lng1, lat2, lng2) {
+                const R = 6371; // Earth's radius in km
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLng = (lng2 - lng1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            }
+
+            showVehicleDetails(vehicleId) {
+                const vehicle = this.vehicleMarkers.find(m => m.vehicleData.id === vehicleId)?.vehicleData;
+                if (!vehicle) return;
+
+                document.getElementById('vehicleModalBody').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Informazioni Mezzo</h6>
+                            <p><strong>Modello:</strong> ${vehicle.modello}</p>
+                            <p><strong>Tipo:</strong> ${vehicle.tipo}</p>
+                            <p><strong>Stato:</strong> ${vehicle.stato}</p>
+                            <p><strong>Batteria:</strong> ${vehicle.batteria}%</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Posizione</h6>
+                            <p><strong>Latitudine:</strong> ${vehicle.lat}</p>
+                            <p><strong>Longitudine:</strong> ${vehicle.lng}</p>
+                            <p><strong>Disponibile:</strong> ${vehicle.stato === 'Disponibile' ? 'Sì' : 'No'}</p>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('unlockVehicleBtn').style.display = 
+                    vehicle.stato === 'Disponibile' ? 'block' : 'none';
+                document.getElementById('unlockVehicleBtn').setAttribute('data-vehicle-id', vehicle.id);
+
+                const modal = new bootstrap.Modal(document.getElementById('vehicleModal'));
+                modal.show();
+            }
+
+            async unlockVehicle() {
+                const vehicleId = document.getElementById('unlockVehicleBtn').getAttribute('data-vehicle-id');
+                
+                try {
+                    // Mock API call
+                    showAlert('Mezzo sbloccato con successo!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('vehicleModal')).hide();
+                    
+                    // Update vehicle status
+                    const marker = this.vehicleMarkers.find(m => m.vehicleData.id == vehicleId);
+                    if (marker) {
+                        marker.vehicleData.stato = 'InUso';
+                        const newIcon = this.getVehicleIcon(marker.vehicleData.tipo, 'InUso');
+                        marker.setIcon(newIcon);
+                    }
+                } catch (error) {
+                    showAlert('Errore nello sblocco del mezzo', 'error');
+                }
+            }
+        }
+
+        // Global functions
+        window.refreshMap = function() {
+            if (window.mapManager) {
+                window.mapManager.loadVehicles();
+                window.mapManager.loadParkings();
+            }
+        };
+
+        window.showMyLocation = function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        window.mapManager.userLocation = { lat, lng };
+                        window.mapManager.map.setView([lat, lng], 15);
+                        
+                        L.marker([lat, lng])
+                            .addTo(window.mapManager.map)
+                            .bindPopup('La tua posizione')
+                            .openPopup();
+                    },
+                    (error) => {
+                        showAlert('Impossibile ottenere la posizione', 'error');
+                    }
+                );
+            } else {
+                showAlert('Geolocalizzazione non supportata', 'error');
+            }
+        };
+
+        window.showVehicleDetails = function(vehicleId) {
+            window.mapManager.showVehicleDetails(vehicleId);
+        };
+
+        window.showParkingDetails = function(parkingId) {
+            showAlert('Dettagli parcheggio in arrivo!', 'info');
+        };
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.mapManager = new MapManager();
+        });
+    </script>
+}
+
+<style>
+    .vehicle-icon, .parking-icon {
+        background: transparent;
+        border: none;
+        text-align: center;
+        line-height: 30px;
+    }
+
+    .vehicle-popup, .parking-popup {
+        min-width: 200px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .leaflet-popup-content {
+        margin: 8px 12px;
+    }
+
+    .leaflet-popup-content h6 {
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+
+    .leaflet-popup-content p {
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+    }
+</style>
