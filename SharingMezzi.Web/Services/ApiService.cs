@@ -8,58 +8,63 @@ namespace SharingMezzi.Web.Services
     {
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
-        private readonly string _baseUrl;
+        private readonly ILogger<ApiService> _logger;
 
-        public ApiService(HttpClient httpClient, IConfiguration configuration)
+        public ApiService(HttpClient httpClient, IConfiguration configuration, ILogger<ApiService> logger)
         {
             _httpClient = httpClient;
             _configuration = configuration;
-            _baseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7000";
+            _logger = logger;
             
-            Console.WriteLine($"=== DEBUG API SERVICE ===");
-            Console.WriteLine($"Configurazione ApiSettings:BaseUrl = {_configuration["ApiSettings:BaseUrl"]}");
-            Console.WriteLine($"URL base finale = {_baseUrl}");
-            Console.WriteLine($"HttpClient BaseAddress sarà impostato a: {_baseUrl}");
+            var baseUrl = _configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5000";
+            _logger.LogInformation("ApiService configurato con BaseUrl: {BaseUrl}", baseUrl);
             
-            // IMPORTANTE: Non impostare BaseAddress se stiamo usando URL completi
-            // _httpClient.BaseAddress = new Uri(_baseUrl);
+            // Configura il BaseAddress
+            _httpClient.BaseAddress = new Uri(baseUrl);
             
             _httpClient.DefaultRequestHeaders.Accept.Clear();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            
-            // Aggiungiamo Origin per aiutare con possibili problemi CORS
-            _httpClient.DefaultRequestHeaders.Add("Origin", "https://localhost:7050");
-            
-            // Timeout esteso
-            _httpClient.Timeout = TimeSpan.FromSeconds(Convert.ToInt32(_configuration["ApiSettings:Timeout"] ?? "60"));
-            
-            Console.WriteLine($"HttpClient configurato completamente");
-            Console.WriteLine($"=========================");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "SharingMezzi.Web/1.0");
         }
 
         public async Task<T?> GetAsync<T>(string endpoint, string? token = null)
         {
             try
             {
-                var fullUrl = $"{_baseUrl}{endpoint}";
-                Console.WriteLine($"GET request to: {fullUrl}");
-                
                 SetAuthorizationHeader(token);
-                var response = await _httpClient.GetAsync(fullUrl);
+                
+                _logger.LogDebug("GET Request: {Endpoint}", endpoint);
+                var response = await _httpClient.GetAsync(endpoint);
                 
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
+                    _logger.LogDebug("GET Success: {StatusCode}", response.StatusCode);
+                    
+                    if (string.IsNullOrWhiteSpace(content))
+                    {
+                        return default(T);
+                    }
+                    
                     return JsonConvert.DeserializeObject<T>(content);
                 }
                 
-                Console.WriteLine($"GET failed: {response.StatusCode}");
+                _logger.LogWarning("GET Failed: {StatusCode} - {Endpoint}", response.StatusCode, endpoint);
+                return default(T);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Errore di connessione HTTP per GET {Endpoint}", endpoint);
+                return default(T);
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "Timeout per GET {Endpoint}", endpoint);
                 return default(T);
             }
             catch (Exception ex)
             {
-                // Log error
-                Console.WriteLine($"API GET Error: {ex.Message}");
+                _logger.LogError(ex, "Errore generico per GET {Endpoint}", endpoint);
                 return default(T);
             }
         }
@@ -68,129 +73,69 @@ namespace SharingMezzi.Web.Services
         {
             try
             {
-                // Costruisci l'URL completo
-                var fullUrl = $"{_baseUrl}{endpoint}";
-                Console.WriteLine($"=== DEBUG POST REQUEST ===");
-                Console.WriteLine($"URL completo: {fullUrl}");
-                Console.WriteLine($"Endpoint: {endpoint}");
-                Console.WriteLine($"BaseUrl: {_baseUrl}");
-                Console.WriteLine($"Dati inviati: {JsonConvert.SerializeObject(data, new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore })}");
-                
                 SetAuthorizationHeader(token);
-                var json = JsonConvert.SerializeObject(data);
+                
+                var json = JsonConvert.SerializeObject(data, new JsonSerializerSettings 
+                { 
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    NullValueHandling = NullValueHandling.Ignore
+                });
+                
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
-                // Log dei headers per debug
-                Console.WriteLine("Headers della richiesta:");
-                foreach (var header in _httpClient.DefaultRequestHeaders)
-                {
-                    Console.WriteLine($"  {header.Key}: {string.Join(", ", header.Value)}");
-                }
+                _logger.LogDebug("POST Request: {Endpoint} - Data: {Data}", endpoint, json);
                 
-                // Usa l'URL completo invece del relativo
-                var response = await _httpClient.PostAsync(fullUrl, content);
+                var response = await _httpClient.PostAsync(endpoint, content);
                 var responseContent = await response.Content.ReadAsStringAsync();
                 
-                Console.WriteLine($"Risposta ricevuta - Stato: {(int)response.StatusCode} {response.StatusCode}");
-                Console.WriteLine($"Contenuto della risposta: {responseContent}");
-                Console.WriteLine($"========================");
+                _logger.LogDebug("POST Response: {StatusCode} - Content: {Content}", 
+                    response.StatusCode, responseContent);
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    try 
+                    if (string.IsNullOrWhiteSpace(responseContent))
                     {
-                        if (string.IsNullOrWhiteSpace(responseContent))
-                        {
-                            Console.WriteLine("ATTENZIONE: Risposta vuota dal server");
-                            dynamic emptyResponse = new System.Dynamic.ExpandoObject();
-                            emptyResponse.Success = false;
-                            emptyResponse.Message = "Il server ha restituito una risposta vuota";
-                            return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(emptyResponse));
-                        }
-                        
+                        // Crea una risposta di successo vuota
+                        dynamic emptyResponse = new System.Dynamic.ExpandoObject();
+                        emptyResponse.Success = true;
+                        emptyResponse.Message = "Operazione completata con successo";
+                        return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(emptyResponse));
+                    }
+                    
+                    try
+                    {
                         return JsonConvert.DeserializeObject<T>(responseContent);
                     }
                     catch (JsonException jsonEx)
                     {
-                        Console.WriteLine($"Errore di deserializzazione JSON: {jsonEx.Message}");
-                        Console.WriteLine($"Contenuto problematico: {responseContent}");
+                        _logger.LogError(jsonEx, "Errore deserializzazione JSON: {Content}", responseContent);
                         
-                        // Se non riusciamo a deserializzare, creiamo una risposta dinamica
                         dynamic errorResponse = new System.Dynamic.ExpandoObject();
                         errorResponse.Success = false;
-                        errorResponse.Message = $"Errore nel formato della risposta: {jsonEx.Message}";
+                        errorResponse.Message = "Errore nel formato della risposta del server";
                         return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(errorResponse));
                     }
                 }
                 
-                // Gestire errori HTTP
-                Console.WriteLine($"Errore API: Stato {(int)response.StatusCode}, Contenuto: {responseContent}");
+                // Gestione errori HTTP
+                _logger.LogWarning("POST Failed: {StatusCode} - {Content}", response.StatusCode, responseContent);
                 
-                if ((int)response.StatusCode == 0 || (int)response.StatusCode >= 500)
-                {
-                    dynamic serverErrorResponse = new System.Dynamic.ExpandoObject();
-                    serverErrorResponse.Success = false;
-                    serverErrorResponse.Message = $"Il server API non è disponibile o ha restituito un errore ({(int)response.StatusCode}). Assicurati che il backend sia in esecuzione.";
-                    return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(serverErrorResponse));
-                }
-                
-                if ((int)response.StatusCode == 404)
-                {
-                    dynamic notFoundResponse = new System.Dynamic.ExpandoObject();
-                    notFoundResponse.Success = false;
-                    notFoundResponse.Message = $"L'endpoint API richiesto ({endpoint}) non esiste. Controlla l'URL o contatta l'amministratore.";
-                    return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(notFoundResponse));
-                }
-                
-                try
-                {
-                    // Prova a deserializzare la risposta di errore
-                    if (!string.IsNullOrWhiteSpace(responseContent))
-                    {
-                        var errorResponse = JsonConvert.DeserializeObject<dynamic>(responseContent);
-                        dynamic typedErrorResponse = new System.Dynamic.ExpandoObject();
-                        typedErrorResponse.Success = false;
-                        typedErrorResponse.Message = errorResponse?.message ?? errorResponse?.Message ?? $"Errore del server: {(int)response.StatusCode}";
-                        return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(typedErrorResponse));
-                    }
-                }
-                catch
-                {
-                    // Se la deserializzazione fallisce, continua con l'errore generico
-                }
-                
-                // Se non siamo riusciti a estrarre un messaggio dalla risposta
-                dynamic genericErrorResponse = new System.Dynamic.ExpandoObject();
-                genericErrorResponse.Success = false;
-                genericErrorResponse.Message = $"Errore del server: {(int)response.StatusCode} {response.StatusCode}";
-                return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(genericErrorResponse));
+                return HandleErrorResponse<T>(response, responseContent, endpoint);
             }
-            catch (HttpRequestException reqEx)
+            catch (HttpRequestException ex)
             {
-                Console.WriteLine($"Errore di connessione HTTP: {reqEx.Message}");
-                if (reqEx.InnerException != null)
-                {
-                    Console.WriteLine($"Causa: {reqEx.InnerException.Message}");
-                }
-                
-                dynamic connectionErrorResponse = new System.Dynamic.ExpandoObject();
-                connectionErrorResponse.Success = false;
-                connectionErrorResponse.Message = $"Impossibile connettersi all'API. Assicurati che il backend sia in esecuzione: {reqEx.Message}";
-                return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(connectionErrorResponse));
+                _logger.LogError(ex, "Errore di connessione HTTP per POST {Endpoint}", endpoint);
+                return CreateErrorResponse<T>("Errore di connessione. Verifica che l'API sia in esecuzione.");
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "Timeout per POST {Endpoint}", endpoint);
+                return CreateErrorResponse<T>("La richiesta ha impiegato troppo tempo. Riprova.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Errore generico API POST: {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                }
-                
-                // Crea una risposta di errore
-                dynamic errorResponse = new System.Dynamic.ExpandoObject();
-                errorResponse.Success = false;
-                errorResponse.Message = $"Errore nella comunicazione con il server: {ex.Message}";
-                return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(errorResponse));
+                _logger.LogError(ex, "Errore generico per POST {Endpoint}", endpoint);
+                return CreateErrorResponse<T>($"Errore imprevisto: {ex.Message}");
             }
         }
 
@@ -199,22 +144,34 @@ namespace SharingMezzi.Web.Services
             try
             {
                 SetAuthorizationHeader(token);
-                var json = JsonConvert.SerializeObject(data);
+                
+                var json = JsonConvert.SerializeObject(data, new JsonSerializerSettings 
+                { 
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore 
+                });
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
+                _logger.LogDebug("PUT Request: {Endpoint}", endpoint);
                 var response = await _httpClient.PutAsync(endpoint, content);
                 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
+                    
+                    if (string.IsNullOrWhiteSpace(responseContent))
+                    {
+                        return default(T);
+                    }
+                    
                     return JsonConvert.DeserializeObject<T>(responseContent);
                 }
                 
+                _logger.LogWarning("PUT Failed: {StatusCode}", response.StatusCode);
                 return default(T);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"API PUT Error: {ex.Message}");
+                _logger.LogError(ex, "Errore PUT {Endpoint}", endpoint);
                 return default(T);
             }
         }
@@ -224,31 +181,87 @@ namespace SharingMezzi.Web.Services
             try
             {
                 SetAuthorizationHeader(token);
+                
+                _logger.LogDebug("DELETE Request: {Endpoint}", endpoint);
                 var response = await _httpClient.DeleteAsync(endpoint);
-                return response.IsSuccessStatusCode;
+                
+                var success = response.IsSuccessStatusCode;
+                _logger.LogDebug("DELETE Response: {StatusCode}", response.StatusCode);
+                
+                return success;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"API DELETE Error: {ex.Message}");
+                _logger.LogError(ex, "Errore DELETE {Endpoint}", endpoint);
                 return false;
             }
         }
 
         private void SetAuthorizationHeader(string? token)
         {
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+            
             if (!string.IsNullOrEmpty(token))
             {
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                _httpClient.DefaultRequestHeaders.Authorization = 
+                    new AuthenticationHeaderValue("Bearer", token);
             }
-            else
+        }
+
+        private T HandleErrorResponse<T>(HttpResponseMessage response, string content, string endpoint)
+        {
+            var statusCode = (int)response.StatusCode;
+            
+            // Gestione errori specifici
+            string errorMessage = statusCode switch
             {
-                _httpClient.DefaultRequestHeaders.Authorization = null;
+                400 => "Richiesta non valida. Controlla i dati inseriti.",
+                401 => "Non autorizzato. Effettua nuovamente il login.",
+                403 => "Accesso negato. Non hai i permessi necessari.",
+                404 => $"Risorsa non trovata: {endpoint}",
+                409 => "Conflitto. La risorsa potrebbe essere già in uso.",
+                429 => "Troppe richieste. Riprova tra qualche minuto.",
+                500 => "Errore interno del server. Contatta l'amministratore.",
+                502 => "Server non disponibile. Riprova più tardi.",
+                503 => "Servizio temporaneamente non disponibile.",
+                _ => $"Errore del server: {statusCode}"
+            };
+
+            // Prova a estrarre il messaggio di errore dalla risposta
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    var errorResponse = JsonConvert.DeserializeObject<dynamic>(content);
+                    if (errorResponse?.message != null)
+                    {
+                        errorMessage = errorResponse.message.ToString();
+                    }
+                    else if (errorResponse?.Message != null)
+                    {
+                        errorMessage = errorResponse.Message.ToString();
+                    }
+                }
             }
+            catch
+            {
+                // Usa il messaggio di errore di default se non riusciamo a deserializzare
+            }
+
+            return CreateErrorResponse<T>(errorMessage);
+        }
+
+        private T CreateErrorResponse<T>(string message)
+        {
+            dynamic errorResponse = new System.Dynamic.ExpandoObject();
+            errorResponse.Success = false;
+            errorResponse.Message = message;
+            return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(errorResponse));
         }
 
         public string GetBaseUrl()
         {
-            return _baseUrl;
+            return _httpClient.BaseAddress?.ToString() ?? _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:5001";
         }
     }
 }

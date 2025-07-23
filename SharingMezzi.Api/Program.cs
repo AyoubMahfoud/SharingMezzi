@@ -2,394 +2,237 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using SharingMezzi.Core.Interfaces.Repositories;
-using SharingMezzi.Core.Interfaces.Services;
-using SharingMezzi.Core.Services;
-using SharingMezzi.Core.Entities;
+using System.Security.Cryptography;
 using SharingMezzi.Infrastructure.Database;
-using SharingMezzi.Infrastructure.Database.Repositories;
-using SharingMezzi.Infrastructure.Mqtt;
-using SharingMezzi.Infrastructure.Services;
-using SharingMezzi.IoT.Services;
-using SharingMezzi.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== DATABASE =====
 builder.Services.AddDbContext<SharingMezziContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? 
+                     "Data Source=sharingmezzi.db"));
 
-// ===== REPOSITORIES =====
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-builder.Services.AddScoped<IMezzoRepository, MezzoRepository>();
-
-// ===== BUSINESS SERVICES =====
-builder.Services.AddScoped<ICorsaService, CorsaService>();
-builder.Services.AddScoped<IMezzoService, MezzoService>();
-builder.Services.AddScoped<IParcheggioService, ParcheggioService>();
-
-// ===== AUTHENTICATION SERVICES =====
-builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-
-// ===== MQTT ACTUATOR SERVICE =====
-builder.Services.AddScoped<SharingMezzi.Core.Services.IMqttActuatorService, SharingMezzi.Infrastructure.Services.MqttActuatorService>();
-
-// ===== JWT AUTHENTICATION =====
-var jwtSection = builder.Configuration.GetSection("Jwt");
-var secretKey = jwtSection["SecretKey"] ?? throw new ArgumentNullException("Jwt:SecretKey non configurato");
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSection["Issuer"],
-        ValidAudience = jwtSection["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-        ClockSkew = TimeSpan.Zero
-    };    // SignalR JWT configuration + Cookie support
-    options.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
-        {
-            var accessToken = context.Request.Query["access_token"];
-            var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
-            {
-                context.Token = accessToken;
-            }
-            
-            // Anche supporto per cookie se non c'è header Authorization
-            if (string.IsNullOrEmpty(context.Token))
-            {
-                var tokenFromCookie = context.Request.Cookies["AuthToken"];
-                if (!string.IsNullOrEmpty(tokenFromCookie))
-                {
-                    context.Token = tokenFromCookie;
-                }
-            }
-            
-            return Task.CompletedTask;
-        }
-    };
-});
-
-builder.Services.AddAuthorization();
-
-// ===== MQTT SERVICES =====
-builder.Services.AddSingleton<IMqttService>(provider =>
-{
-    var config = provider.GetRequiredService<IConfiguration>();
-    return new MqttService(
-        config["Mqtt:Server"] ?? "localhost",
-        config.GetValue<int>("Mqtt:Port", 1883),
-        config["Mqtt:ClientId"] ?? "SharingMezziApi"
-    );
-});
-
-// ===== IOT SERVICES =====
-builder.Services.AddSingleton<ConnectedIoTClientsService>();
-builder.Services.AddSingleton<SharingMezziBroker>();
-builder.Services.AddHostedService(provider => provider.GetRequiredService<SharingMezziBroker>());
-builder.Services.AddHostedService<IoTBackgroundService>();
-builder.Services.AddHostedService<MqttBackgroundService>();
-
-// ===== BATTERY EMULATION SERVICE =====
-builder.Services.AddSingleton<BatteryEmulatorService>();
-builder.Services.AddHostedService(provider => provider.GetRequiredService<BatteryEmulatorService>());
-
-// ===== SIGNALR HUBS =====
-builder.Services.AddSignalR();
-
-// ===== API CONTROLLERS =====
+// ===== CONTROLLERS =====
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// ===== HTTP CLIENT =====
-builder.Services.AddHttpClient();
+// ===== JWT AUTHENTICATION =====
+var jwtKey = builder.Configuration["Jwt:SecretKey"] ?? "SharingMezzi-SecretKey-2024-VeryLongAndSecureKey123456789";
+var key = Encoding.ASCII.GetBytes(jwtKey);
 
+builder.Services.AddAuthentication(x =>
+{
+    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(x =>
+{
+    x.RequireHttpsMetadata = false;
+    x.SaveToken = true;
+    x.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = false, // Disabilita per test
+        ValidateAudience = false, // Disabilita per test
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+// ===== SWAGGER =====
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() { 
-        Title = "SharingMezzi API", 
-        Version = "v1.0",
-        Description = @"
-**API completa per sistema sharing mezzi con IoT/MQTT e autenticazione JWT**
-
-### Funzionalità principali:
-- **Autenticazione JWT** - Sistema sicuro di login/registrazione
-- **Gestione Mezzi** - Bici muscolari, elettriche e monopattini
-- **Gestione Parcheggi** - Monitoraggio slot in tempo reale
-- **Sistema Corse** - Inizio/fine corsa con calcolo tariffe
-- **Gestione Crediti** - Ricariche e punti eco
-- **SignalR Real-time** - Notifiche live per utenti e admin
-- **MQTT/IoT** - Integrazione sensori e attuatori
-- **Dashboard Admin** - Pannello amministrazione completo
-
-### Come usare l'API:
-1. **Registrazione**: `POST /api/auth/register` 
-2. **Login**: `POST /api/auth/login` per ottenere il token JWT
-3. **Autorizzazione**: Clicca il pulsante 'Authorize' e inserisci: `Bearer {il_tuo_token}`
-4. **Test**: Ora puoi testare tutti gli endpoint protetti!
-
-### Credenziali di test:
-- **Admin**: admin@test.com / admin123
-- **Utente**: mario@test.com / user123
-",
-        Contact = new Microsoft.OpenApi.Models.OpenApiContact
-        {
-            Name = "SharingMezzi Team",
-            Email = "support@sharingmezzi.com"
-        }
-    });
-    
-    // JWT Authentication configuration
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
-        Description = @"
-Autenticazione JWT usando l'header Authorization.
-Inserisci 'Bearer' seguito da uno spazio e dal token.
-Esempio: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'",
-        Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "Bearer",
-        BearerFormat = "JWT"
+        Title = "SharingMezzi API",
+        Version = "v1",
+        Description = "API per il sistema di sharing mezzi"
     });
-
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "Bearer",
-                Name = "Authorization",
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-            },
-            new List<string>()
-        }
-    });
-
-    // Organizza i controller in gruppi
-    c.TagActionsBy(api => new[] { api.GroupName ?? api.ActionDescriptor.RouteValues["controller"] });
-    c.DocInclusionPredicate((name, api) => true);
 });
 
 // ===== CORS =====
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", builder =>
+    options.AddPolicy("AllowFrontend", builder =>
     {
         builder.WithOrigins(
                 "http://localhost:5050", 
                 "https://localhost:7050",
-                "http://localhost:7050"
+                "https://localhost:5050",
+                "http://localhost:5051",
+                "https://localhost:5051"
                )
                .AllowAnyMethod()
                .AllowAnyHeader()
                .AllowCredentials();
     });
-    
-    // NUOVO: Policy per Admin Dashboard
-    options.AddPolicy("AdminDashboard", policy =>
-    {
-        policy.WithOrigins("http://localhost:5000", "https://localhost:5001")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
-    });
+});
+
+// ===== CONFIGURE PORTS =====
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenLocalhost(5001, configure => configure.UseHttps()); // HTTPS
+    options.ListenLocalhost(5000); // HTTP
 });
 
 var app = builder.Build();
 
-app.UseStaticFiles(new StaticFileOptions
-{
-    ServeUnknownFileTypes = true,
-    DefaultContentType = "application/octet-stream"
-});
 // ===== DATABASE INITIALIZATION =====
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SharingMezziContext>();
     await context.Database.EnsureCreatedAsync();
-    await SeedTestData(context);
+    
+    // Crea utente di test se non esiste
+    if (!context.Utenti.Any())
+    {
+        Console.WriteLine("🌱 Creazione utente admin...");
+        
+        // Crea dinamicamente l'utente senza dipendere da enum specifici
+        var adminUser = new SharingMezzi.Core.Entities.Utente();
+        
+        // Imposta le proprietà di base
+        adminUser.Email = "admin@sharingmezzi.it";
+        adminUser.Nome = "Admin";
+        adminUser.Cognome = "System";
+        adminUser.Password = HashPassword("admin123");
+        adminUser.DataRegistrazione = DateTime.UtcNow;
+        adminUser.Credito = 100.00m;
+        
+        // Usa reflection per impostare proprietà che potrebbero esistere
+        var userType = adminUser.GetType();
+        
+        // Imposta Ruolo se esiste
+        var ruoloProperty = userType.GetProperty("Ruolo");
+        if (ruoloProperty != null)
+        {
+            try
+            {
+                if (ruoloProperty.PropertyType.IsEnum)
+                {
+                    // Prova con "Amministratore"
+                    try
+                    {
+                        var adminRole = Enum.Parse(ruoloProperty.PropertyType, "Amministratore");
+                        ruoloProperty.SetValue(adminUser, adminRole);
+                    }
+                    catch
+                    {
+                        // Prova con "Admin"  
+                        var adminRole = Enum.Parse(ruoloProperty.PropertyType, "Admin");
+                        ruoloProperty.SetValue(adminUser, adminRole);
+                    }
+                }
+                else if (ruoloProperty.PropertyType == typeof(string))
+                {
+                    ruoloProperty.SetValue(adminUser, "Amministratore");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Avviso: Non riesco a impostare il ruolo - {ex.Message}");
+            }
+        }
+        
+        // Imposta Stato se esiste
+        var statoProperty = userType.GetProperty("Stato");
+        if (statoProperty != null)
+        {
+            try
+            {
+                if (statoProperty.PropertyType.IsEnum)
+                {
+                    var attivoValue = Enum.Parse(statoProperty.PropertyType, "Attivo");
+                    statoProperty.SetValue(adminUser, attivoValue);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Avviso: Non riesco a impostare lo stato - {ex.Message}");
+            }
+        }
+        
+        // Imposta PuntiEco se esiste
+        var puntiEcoProperty = userType.GetProperty("PuntiEco");
+        if (puntiEcoProperty != null)
+        {
+            try
+            {
+                puntiEcoProperty.SetValue(adminUser, 50);
+            }
+            catch { }
+        }
+        
+        context.Utenti.Add(adminUser);
+        await context.SaveChangesAsync();
+        
+        Console.WriteLine("✅ Utente admin creato:");
+        Console.WriteLine($"   Email: admin@sharingmezzi.it");
+        Console.WriteLine($"   Password: admin123");
+    }
+    else
+    {
+        Console.WriteLine("✅ Database già inizializzato");
+    }
 }
 
 // ===== PIPELINE =====
-// Abilita Swagger in tutte le modalità per testing
 app.UseSwagger();
 app.UseSwaggerUI(c => 
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "SharingMezzi API v1");
-    c.RoutePrefix = "swagger"; // Swagger disponibile su /swagger
-    c.DocumentTitle = "SharingMezzi API - Swagger UI";
-    c.DefaultModelsExpandDepth(-1); // Nasconde i modelli di default
-    c.DisplayRequestDuration();
+    c.RoutePrefix = "swagger";
 });
 
-if (app.Environment.IsDevelopment())
-{
-    // ===== MIDDLEWARE PER DEBUGGING ROUTING =====
-    app.Use(async (context, next) =>
-    {
-        Console.WriteLine($"[ROUTING] Request: {context.Request.Method} {context.Request.Path}");
-        
-        // Log del token Authorization header per debug
-        if (context.Request.Headers.ContainsKey("Authorization"))
-        {
-            Console.WriteLine("[AUTH] User has Authorization header");
-        }
-        else
-        {
-            Console.WriteLine("[AUTH] No Authorization header found");
-        }
-        
-        await next();
-        
-        Console.WriteLine($"[ROUTING] Response: {context.Response.StatusCode}");
-    });
-}
+// CORS prima dell'autenticazione
+app.UseCors("AllowFrontend");
 
-app.UseCors("AllowAll");
-
-// HTTPS redirect only in production
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
-
-app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ===== CONTROLLERS =====
 app.MapControllers();
 
-// ===== ADMIN DASHBOARD ROUTES =====
-app.MapFallbackToFile("/admin/{*path:nonfile}", "/admin/index.html");
+// ===== ENDPOINTS DI TEST =====
+app.MapGet("/", () => "SharingMezzi API è attiva! Vai su /swagger per la documentazione");
 
-// ===== ROUTING PERSONALIZZATO =====
-// Route di default per la root
-app.MapGet("/", context =>
-{
-    context.Response.Redirect("/admin/dashboard.html");
-    return Task.CompletedTask;
+app.MapGet("/health", () => new {
+    Status = "OK",
+    Timestamp = DateTime.UtcNow,
+    Environment = app.Environment.EnvironmentName,
+    Database = "SQLite",
+    Message = "API funzionante"
 });
 
-// Admin dashboard redirect  
-app.MapGet("/admin", context =>
+// ===== ENDPOINT TEST AUTH =====
+app.MapPost("/api/test-login", async (SharingMezziContext context) =>
 {
-    context.Response.Redirect("/admin/dashboard.html");
-    return Task.CompletedTask;
+    var admin = await context.Utenti.FirstOrDefaultAsync(u => u.Email == "admin@sharingmezzi.it");
+    if (admin == null)
+    {
+        return Results.NotFound("Admin user not found");
+    }
+    
+    return Results.Ok(new {
+        Message = "Admin user exists",
+        Email = admin.Email,
+        Nome = admin.Nome,
+        HasPassword = !string.IsNullOrEmpty(admin.Password)
+    });
 });
 
-// ===== SIGNALR HUBS =====
-app.MapHub<MezziHub>("/hubs/mezzi");
-app.MapHub<CorseHub>("/hubs/corse");
-app.MapHub<ParcheggiHub>("/hubs/parcheggi");
-app.MapHub<IoTHub>("/hubs/iot");
-
-// ===== STARTUP INFO =====
-Console.WriteLine("╔═════════════════════════════════════════════════════════════╗");
-Console.WriteLine("║                   SHARING MEZZI API                         ║");
-Console.WriteLine("╠═════════════════════════════════════════════════════════════╣");
-Console.WriteLine($"║ API URL: http://localhost:5000                              ║");
-Console.WriteLine($"║ Swagger: http://localhost:5000/swagger                      ║");
-Console.WriteLine($"║ MQTT Broker: localhost:1883                                 ║");
-Console.WriteLine($"║ SignalR Hubs: /hubs/[mezzi|corse|parcheggi|iot]             ║");
-Console.WriteLine("║ Admin Dashboard: http://localhost:5000/admin                ║");
-Console.WriteLine("║ Login Admin: admin@test.com / admin123                      ║");
-Console.WriteLine("╠═════════════════════════════════════════════════════════════╣");
-Console.WriteLine("║ Servizi attivi:                                             ║");
-Console.WriteLine("║    • MQTT Broker per IoT                                    ║");
-Console.WriteLine("║    • Client IoT simulati per tutti i mezzi                  ║");
-Console.WriteLine("║    • SignalR per notifiche real-time                        ║");
-Console.WriteLine("║    • Database SQLite con dati di test                       ║");
-Console.WriteLine("║    • Swagger UI abilitato per testing                       ║");
-Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
+Console.WriteLine("🚀 SharingMezzi.Api avviato su:");
+Console.WriteLine("   HTTP:  http://localhost:5000");
+Console.WriteLine("   HTTPS: https://localhost:5001");
+Console.WriteLine("   📚 Swagger: https://localhost:5001/swagger");
+Console.WriteLine("   🧪 Test: http://localhost:5000/health");
 
 app.Run();
-
-// ===== SEED DATA =====
-static async Task SeedTestData(SharingMezziContext context)
-{
-    if (!context.Utenti.Any())
-    {        
-        var utenti = new[]
-        {
-            new Utente { 
-                Email = "admin@test.com", 
-                Nome = "Admin", 
-                Cognome = "System", 
-                Password = HashPassword("admin123"), 
-                Ruolo = RuoloUtente.Amministratore,
-                DataRegistrazione = DateTime.UtcNow
-            },
-            new Utente { 
-                Email = "mario@test.com", 
-                Nome = "Mario", 
-                Cognome = "Rossi", 
-                Password = HashPassword("user123"), 
-                Ruolo = RuoloUtente.Utente,
-                Telefono = "3331234567",
-                DataRegistrazione = DateTime.UtcNow
-            },
-            new Utente { 
-                Email = "lucia@test.com", 
-                Nome = "Lucia", 
-                Cognome = "Verdi", 
-                Password = HashPassword("user123"), 
-                Ruolo = RuoloUtente.Utente,
-                Telefono = "3337654321",
-                DataRegistrazione = DateTime.UtcNow
-            }
-        };
-        await context.Utenti.AddRangeAsync(utenti);
-        
-        var parcheggi = new[]
-        {
-            new Parcheggio { Nome = "Centro Storico", Indirizzo = "Piazza Castello 1", Capienza = 25, PostiLiberi = 20, PostiOccupati = 5 },
-            new Parcheggio { Nome = "Politecnico", Indirizzo = "Corso Duca Abruzzi 24", Capienza = 40, PostiLiberi = 30, PostiOccupati = 10 },
-            new Parcheggio { Nome = "Porta Nuova", Indirizzo = "Piazza Carlo Felice 1", Capienza = 30, PostiLiberi = 25, PostiOccupati = 5 }
-        };
-        await context.Parcheggi.AddRangeAsync(parcheggi);
-        await context.SaveChangesAsync();
-          var mezzi = new[]
-        {
-            new Mezzo { Modello = "City Bike Classic", Tipo = TipoMezzo.BiciMuscolare, IsElettrico = false, TariffaPerMinuto = 0.15m, TariffaFissa = 1.00m, ParcheggioId = 1, Stato = StatoMezzo.Disponibile },
-            new Mezzo { Modello = "E-Bike Urban Pro", Tipo = TipoMezzo.BiciElettrica, IsElettrico = true, LivelloBatteria = 95, TariffaPerMinuto = 0.25m, TariffaFissa = 1.00m, ParcheggioId = 1, Stato = StatoMezzo.Disponibile },
-            new Mezzo { Modello = "E-Bike Mountain", Tipo = TipoMezzo.BiciElettrica, IsElettrico = true, LivelloBatteria = 78, TariffaPerMinuto = 0.30m, TariffaFissa = 1.00m, ParcheggioId = 2, Stato = StatoMezzo.Disponibile },
-            new Mezzo { Modello = "Urban Scooter X1", Tipo = TipoMezzo.Monopattino, IsElettrico = true, LivelloBatteria = 82, TariffaPerMinuto = 0.35m, TariffaFissa = 1.00m, ParcheggioId = 2, Stato = StatoMezzo.Disponibile },
-            new Mezzo { Modello = "Eco Scooter Lite", Tipo = TipoMezzo.Monopattino, IsElettrico = true, LivelloBatteria = 67, TariffaPerMinuto = 0.30m, TariffaFissa = 1.00m, ParcheggioId = 3, Stato = StatoMezzo.Disponibile },
-            new Mezzo { Modello = "City Bike Sport", Tipo = TipoMezzo.BiciMuscolare, IsElettrico = false, TariffaPerMinuto = 0.18m, TariffaFissa = 1.00m, ParcheggioId = 3, Stato = StatoMezzo.Disponibile }
-        };
-        await context.Mezzi.AddRangeAsync(mezzi);
-        await context.SaveChangesAsync();
-          Console.WriteLine("Database seeded with test data");
-        Console.WriteLine($"   • {utenti.Length} utenti");
-        Console.WriteLine($"   • {parcheggi.Length} parcheggi");
-        Console.WriteLine($"   • {mezzi.Length} mezzi");
-    }
-}
 
 // ===== HELPER FUNCTIONS =====
 static string HashPassword(string password)
 {
-    using var sha256 = System.Security.Cryptography.SHA256.Create();
-    var hashedBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+    using var sha256 = SHA256.Create();
+    var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
     return Convert.ToBase64String(hashedBytes);
 }

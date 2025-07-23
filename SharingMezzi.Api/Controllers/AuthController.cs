@@ -1,245 +1,241 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SharingMezzi.Core.DTOs;
-using SharingMezzi.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using SharingMezzi.Infrastructure.Database;
 
-namespace SharingMezzi.Api.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController : ControllerBase
+namespace SharingMezzi.Api.Controllers
 {
-    private readonly IAuthService _authService;
-    private readonly ILogger<AuthController> _logger;
-
-    public AuthController(IAuthService authService, ILogger<AuthController> logger)
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AuthController : ControllerBase
     {
-        _authService = authService;
-        _logger = logger;
-    }
+        private readonly SharingMezziContext _context;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthController> _logger;
 
-    /// <summary>
-    /// Login utente con email e password
-    /// </summary>
-    [HttpPost("login")]
-    public async Task<ActionResult<AuthResultDto>> Login([FromBody] LoginDto loginDto)
-    {
-        try
+        public AuthController(
+            SharingMezziContext context, 
+            IConfiguration configuration,
+            ILogger<AuthController> logger)
         {
-            if (!ModelState.IsValid)
+            _context = context;
+            _configuration = configuration;
+            _logger = logger;
+        }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            try
             {
-                return BadRequest(new AuthResultDto
+                _logger.LogInformation("Tentativo di login per: {Email}", request.Email);
+
+                if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
                 {
-                    Success = false,
-                    Message = "Dati di login non validi",
+                    return BadRequest(new { Success = false, Message = "Email e password sono obbligatorie" });
+                }
+
+                var utente = await _context.Utenti
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+                if (utente == null)
+                {
+                    _logger.LogWarning("Utente non trovato: {Email}", request.Email);
+                    return Unauthorized(new { Success = false, Message = "Email o password non corretti" });
+                }
+
+                if (!VerifyPassword(request.Password, utente.Password))
+                {
+                    _logger.LogWarning("Password errata per: {Email}", request.Email);
+                    return Unauthorized(new { Success = false, Message = "Email o password non corretti" });
+                }
+
+                var token = GenerateJwtToken(utente);
+
+                _logger.LogInformation("Login riuscito per: {Email}", request.Email);
+
+                var response = new
+                {
+                    Success = true, // Maiuscolo per compatibilità frontend
+                    Message = "Login effettuato con successo",
+                    Token = token,
+                    User = new
+                    {
+                        Id = utente.Id,
+                        Nome = utente.Nome,
+                        Cognome = utente.Cognome,
+                        Email = utente.Email,
+                        Ruolo = GetUserRole(utente),
+                        Credito = utente.Credito,
+                        PuntiEco = GetUserPoints(utente)
+                    }
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Errore durante il login per: {Email}", request.Email);
+                return StatusCode(500, new { Success = false, Message = "Errore interno del server" });
+            }
+        }
+
+        [HttpPost("create-admin")]
+        public async Task<IActionResult> CreateAdmin()
+        {
+            try
+            {
+                var existingAdmin = await _context.Utenti
+                    .FirstOrDefaultAsync(u => u.Email == "admin@sharingmezzi.it");
+
+                if (existingAdmin != null)
+                {
+                    return Ok(new { Message = "Admin già esistente", Email = existingAdmin.Email });
+                }
+
+                var adminUser = new SharingMezzi.Core.Entities.Utente();
+                
+                adminUser.Email = "admin@sharingmezzi.it";
+                adminUser.Nome = "Admin";
+                adminUser.Cognome = "System";
+                adminUser.Password = HashPassword("admin123");
+                adminUser.DataRegistrazione = DateTime.UtcNow;
+                adminUser.Credito = 100.00m;
+
+                // Imposta proprietà dinamicamente
+                var userType = adminUser.GetType();
+                
+                var ruoloProperty = userType.GetProperty("Ruolo");
+                if (ruoloProperty != null && ruoloProperty.PropertyType.IsEnum)
+                {
+                    try
+                    {
+                        var adminRole = Enum.Parse(ruoloProperty.PropertyType, "Amministratore");
+                        ruoloProperty.SetValue(adminUser, adminRole);
+                    }
+                    catch { }
+                }
+                
+                var statoProperty = userType.GetProperty("Stato");
+                if (statoProperty != null && statoProperty.PropertyType.IsEnum)
+                {
+                    try
+                    {
+                        var attivoValue = Enum.Parse(statoProperty.PropertyType, "Attivo");
+                        statoProperty.SetValue(adminUser, attivoValue);
+                    }
+                    catch { }
+                }
+                
+                var puntiEcoProperty = userType.GetProperty("PuntiEco");
+                if (puntiEcoProperty != null)
+                {
+                    try
+                    {
+                        puntiEcoProperty.SetValue(adminUser, 50);
+                    }
+                    catch { }
+                }
+
+                _context.Utenti.Add(adminUser);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Utente admin creato con successo",
+                    Email = "admin@sharingmezzi.it",
+                    Password = "admin123"
                 });
             }
-
-            var result = await _authService.LoginAsync(loginDto);
-            
-            if (!result.Success)
+            catch (Exception ex)
             {
-                return Unauthorized(result);
+                _logger.LogError(ex, "Errore nella creazione dell'admin");
+                return StatusCode(500, new { Error = ex.Message });
             }
-
-            _logger.LogInformation("Login effettuato con successo per {Email}", loginDto.Email);
-            return Ok(result);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Errore durante il login per {Email}", loginDto.Email);
-            return StatusCode(500, new AuthResultDto
-            {
-                Success = false,
-                Message = "Errore interno del server"
-            });
-        }
-    }
 
-    /// <summary>
-    /// Registrazione nuovo utente
-    /// </summary>
-    [HttpPost("register")]
-    public async Task<ActionResult<AuthResultDto>> Register([FromBody] RegisterDto registerDto)
-    {
-        try
+        private string GenerateJwtToken(dynamic utente)
         {
-            if (!ModelState.IsValid)
+            var secretKey = _configuration["Jwt:SecretKey"] ?? "SharingMezzi-SecretKey-2024-VeryLongAndSecureKey123456789";
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var claims = new List<Claim>
             {
-                return BadRequest(new AuthResultDto
+                new Claim(ClaimTypes.NameIdentifier, utente.Id.ToString()),
+                new Claim(ClaimTypes.Name, utente.Nome ?? ""),
+                new Claim(ClaimTypes.Email, utente.Email ?? ""),
+                new Claim(ClaimTypes.Role, GetUserRole(utente))
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"] ?? "SharingMezzi.Api",
+                audience: _configuration["Jwt:Audience"] ?? "SharingMezzi.Web",
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(1),
+                signingCredentials: credentials);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private string GetUserRole(dynamic utente)
+        {
+            try
+            {
+                var ruoloProperty = utente.GetType().GetProperty("Ruolo");
+                if (ruoloProperty != null)
                 {
-                    Success = false,
-                    Message = "Dati di registrazione non validi",
-                });
+                    var ruolo = ruoloProperty.GetValue(utente);
+                    return ruolo?.ToString() ?? "Utente";
+                }
+                return "Utente";
             }
-
-            var result = await _authService.RegisterAsync(registerDto);
-            
-            if (!result.Success)
+            catch
             {
-                return BadRequest(result);
+                return "Utente";
             }
-
-            _logger.LogInformation("Registrazione completata per {Email}", registerDto.Email);
-            return Ok(result);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Errore durante la registrazione per {Email}", registerDto.Email);
-            return StatusCode(500, new AuthResultDto
-            {
-                Success = false,
-                Message = "Errore interno del server"
-            });
-        }
-    }
 
-    /// <summary>
-    /// Rinnova il token di accesso usando il refresh token
-    /// </summary>
-    [HttpPost("refresh")]
-    public async Task<ActionResult<AuthResultDto>> RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
-    {
-        try
+        private int GetUserPoints(dynamic utente)
         {
-            if (string.IsNullOrEmpty(refreshTokenDto.Token) || string.IsNullOrEmpty(refreshTokenDto.RefreshToken))
+            try
             {
-                return BadRequest(new AuthResultDto
+                var puntiProperty = utente.GetType().GetProperty("PuntiEco");
+                if (puntiProperty != null)
                 {
-                    Success = false,
-                    Message = "Token e refresh token sono obbligatori"
-                });
+                    var punti = puntiProperty.GetValue(utente);
+                    return punti is int intValue ? intValue : 0;
+                }
+                return 0;
             }
-
-            var result = await _authService.RefreshTokenAsync(refreshTokenDto.Token, refreshTokenDto.RefreshToken);
-            
-            if (!result.Success)
+            catch
             {
-                return Unauthorized(result);
+                return 0;
             }
-
-            _logger.LogInformation("Token rinnovato con successo");
-            return Ok(result);
         }
-        catch (Exception ex)
+
+        private static bool VerifyPassword(string password, string hashedPassword)
         {
-            _logger.LogError(ex, "Errore durante il refresh del token");
-            return StatusCode(500, new AuthResultDto
-            {
-                Success = false,
-                Message = "Errore interno del server"
-            });
+            var hashedInput = HashPassword(password);
+            return hashedInput == hashedPassword;
+        }
+
+        private static string HashPassword(string password)
+        {
+            using var sha256 = SHA256.Create();
+            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+            return Convert.ToBase64String(hashedBytes);
         }
     }
 
-    /// <summary>
-    /// Logout - revoca il refresh token
-    /// </summary>
-    [HttpPost("logout")]
-    [Authorize]
-    public async Task<ActionResult> Logout([FromBody] LogoutDto logoutDto)
+    public class LoginRequest
     {
-        try
-        {
-            if (string.IsNullOrEmpty(logoutDto.RefreshToken))
-            {
-                return BadRequest(new { message = "Refresh token obbligatorio" });
-            }
-
-            var success = await _authService.RevokeTokenAsync(logoutDto.RefreshToken);
-            
-            if (!success)
-            {
-                return BadRequest(new { message = "Impossibile effettuare il logout" });
-            }
-
-            _logger.LogInformation("Logout effettuato per utente {UserId}", GetCurrentUserId());
-            return Ok(new { message = "Logout effettuato con successo" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Errore durante il logout");
-            return StatusCode(500, new { message = "Errore interno del server" });
-        }
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
-
-    /// <summary>
-    /// Ottieni informazioni dell'utente corrente
-    /// </summary>
-    [HttpGet("me")]
-    [Authorize]
-    public async Task<ActionResult<UtenteDto>> GetCurrentUser()
-    {
-        try
-        {
-            var userId = GetCurrentUserId();
-            if (userId == 0)
-            {
-                return Unauthorized(new { message = "Token non valido" });
-            }
-
-            var user = await _authService.GetCurrentUserAsync(userId);
-            if (user == null)
-            {
-                return NotFound(new { message = "Utente non trovato" });
-            }
-
-            return Ok(user);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Errore durante il recupero dell'utente corrente");
-            return StatusCode(500, new { message = "Errore interno del server" });
-        }
-    }
-
-    /// <summary>
-    /// Verifica se il token è valido
-    /// </summary>
-    [HttpPost("validate")]
-    [Authorize]
-    public ActionResult ValidateToken()
-    {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var userRole = GetCurrentUserRole();
-            
-            return Ok(new 
-            { 
-                valid = true, 
-                userId = userId,
-                role = userRole,
-                message = "Token valido" 
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Errore durante la validazione del token");
-            return Unauthorized(new { valid = false, message = "Token non valido" });
-        }
-    }
-
-    private int GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirst("user_id")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return int.TryParse(userIdClaim, out var userId) ? userId : 0;
-    }
-
-    private string GetCurrentUserRole()
-    {
-        return User.FindFirst(ClaimTypes.Role)?.Value ?? "Utente";
-    }
-}
-
-public class RefreshTokenDto
-{
-    public string Token { get; set; } = string.Empty;
-    public string RefreshToken { get; set; } = string.Empty;
-}
-
-public class LogoutDto
-{
-    public string RefreshToken { get; set; } = string.Empty;
 }
