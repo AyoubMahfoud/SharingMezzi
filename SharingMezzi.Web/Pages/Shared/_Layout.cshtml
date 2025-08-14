@@ -1,250 +1,208 @@
+@using Microsoft.AspNetCore.Http.Extensions
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-theme="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#6366f1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1f2e" media="(prefers-color-scheme: dark)" />
+    
     <title>@ViewData["Title"] - SharingMezzi</title>
     
-    <!-- Bootstrap 5.3 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="SharingMezzi - Il sistema di condivisione di mezzi di trasporto più conveniente e sostenibile. Biciclette, scooter e auto elettriche sempre disponibili." />
+    <meta name="keywords" content="sharing mobility, bike sharing, scooter sharing, mobilità sostenibile, trasporti urbani" />
+    <meta name="author" content="SharingMezzi" />
+    
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Premium CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous" />
+    
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/premium-style.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/premium-dark.css" asp-append-version="true" />
+    
+    @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="@ViewData["BodyClass"]">
-    <div class="wrapper">
-        <!-- Premium Sidebar -->
-        <nav id="sidebar" class="premium-sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-brand">
-                    <div class="brand-icon">
-                        <i class="fas fa-bicycle"></i>
+<body>
+    <div class="wrapper d-flex">
+        <!-- Sidebar -->
+        <nav class="premium-sidebar bg-white shadow-sm" id="sidebar" style="width: 260px; min-height: 100vh; position: fixed; top: 0; left: 0; z-index: 1000;">
+            <div class="sidebar-header p-3 border-bottom">
+                <div class="d-flex align-items-center">
+                    <div class="brand-icon me-3">
+                        <i class="fas fa-bicycle text-primary fs-4"></i>
                     </div>
-                    <div class="brand-content">
-                        <span class="brand-text">SharingMezzi</span>
-                        <span class="brand-subtitle">Premium</span>
-                    </div>
-                </div>
-                <button class="sidebar-toggle btn-premium-ghost" type="button">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="sidebar-content">
-                <div class="sidebar-user premium-card" id="sidebarUser">
-                    <div class="user-avatar">
-                        <div class="avatar-circle">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="status-indicator"></div>
-                    </div>
-                    <div class="user-info">
-                        <div class="user-name">Caricamento...</div>
-                        <div class="user-role">Utente</div>
+                    <div>
+                        <h5 class="mb-0 fw-bold">SharingMezzi</h5>
+                        <small class="text-muted text-uppercase">Premium</small>
                     </div>
                 </div>
                 
-                <ul class="sidebar-nav">
-                    <li class="nav-section">
-                        <span class="nav-section-title">Principale</span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/Dashboard">
-                            <div class="nav-icon">
-                                <i class="fas fa-tachometer-alt"></i>
-                            </div>
+                <button class="btn btn-sm btn-outline-secondary d-lg-none position-absolute top-0 end-0 m-2" id="sidebarClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="sidebar-content flex-grow-1 p-3">
+                <!-- Navigation Menu -->
+                <div class="nav flex-column">
+                    <div class="nav-section mb-2">
+                        <small class="text-muted text-uppercase fw-semibold">Principale</small>
+                    </div>
+                    
+                    <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 @(ViewContext.RouteData.Values["page"]?.ToString() == "/Index" ? "active bg-primary text-white" : "text-dark")" href="/">
+                        <i class="fas fa-home me-3"></i>
+                        <span>Home</span>
+                    </a>
+
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark" href="/Dashboard">
+                            <i class="fas fa-chart-pie me-3"></i>
                             <span>Dashboard</span>
-                            <div class="nav-arrow">
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/Vehicles">
-                            <div class="nav-icon">
-                                <i class="fas fa-bicycle"></i>
-                            </div>
-                            <span>Mezzi</span>
-                            <div class="nav-badge">6</div>
+                    }
+
+                    <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark" href="/Vehicles">
+                        <i class="fas fa-bicycle me-3"></i>
+                        <span>Mezzi</span>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <span class="badge bg-primary rounded-pill ms-auto">125</span>
+                        }
+                    </a>
+
+                    <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark" href="/Map">
+                        <i class="fas fa-map-marked-alt me-3"></i>
+                        <span>Mappa</span>
+                    </a>
+
+                    <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark" href="/Parking">
+                        <i class="fas fa-parking me-3"></i>
+                        <span>Parcheggi</span>
+                    </a>
+
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="nav-section mt-4 mb-2">
+                            <small class="text-muted text-uppercase fw-semibold">Il Mio Account</small>
+                        </div>
+
+                        <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark" href="/Trips">
+                            <i class="fas fa-route me-3"></i>
+                            <span>Viaggi</span>
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/Parking">
-                            <div class="nav-icon">
-                                <i class="fas fa-parking"></i>
-                            </div>
-                            <span>Parcheggi</span>
+
+                        <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark" href="/Billing">
+                            <i class="fas fa-credit-card me-3"></i>
+                            <span>Fatturazione</span>
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/Map">
-                            <div class="nav-icon">
-                                <i class="fas fa-map-marked-alt"></i>
-                            </div>
-                            <span>Mappa</span>
-                        </a>
-                    </li>
-                    
-                    <li class="nav-section">
-                        <span class="nav-section-title">Attività</span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/Trips">
-                            <div class="nav-icon">
-                                <i class="fas fa-route"></i>
-                            </div>
-                            <span>Le mie corse</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/Billing">
-                            <div class="nav-icon">
-                                <i class="fas fa-credit-card"></i>
-                            </div>
-                            <span>Ricariche</span>
-                        </a>
-                    </li>
-                    
-                    <li class="nav-section">
-                        <span class="nav-section-title">Account</span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/Profile">
-                            <div class="nav-icon">
-                                <i class="fas fa-user"></i>
-                            </div>
+
+                        <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark" href="/Profile">
+                            <i class="fas fa-user-circle me-3"></i>
                             <span>Profilo</span>
                         </a>
-                    </li>
-                    
-                    <li class="nav-section admin-only" style="display: none;">
-                        <span class="nav-section-title">Amministrazione</span>
-                    </li>
-                    <li class="nav-item admin-only" style="display: none;">
-                        <a class="nav-link" href="/test-api">
-                            <div class="nav-icon">
-                                <i class="fas fa-plug"></i>
-                            </div>
-                            <span>Test API</span>
-                        </a>
-                    </li>
-                    <li class="nav-item admin-only" style="display: none;">
-                        <a class="nav-link" href="/Admin/Users">
-                            <div class="nav-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <span>Gestione Utenti</span>
-                        </a>
-                    </li>
-                </ul>
+                    }
+                </div>
             </div>
-            
-            <div class="sidebar-footer">
-                <button class="btn-premium-outline logout-btn" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i> 
-                    <span>Logout</span>
-                </button>
+
+            <div class="sidebar-footer p-3 border-top">
+                <div class="d-flex justify-content-center gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" id="themeToggle" title="Cambia tema">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <a class="btn btn-sm btn-outline-danger" href="/Auth/Logout" title="Disconnetti">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-sm btn-outline-primary" href="/Auth/Login" title="Accedi">
+                            <i class="fas fa-sign-in-alt"></i>
+                        </a>
+                    }
+                </div>
             </div>
         </nav>
 
         <!-- Main Content -->
-        <div id="content" class="content">
-            <!-- Premium Top Navigation -->
-            <nav class="premium-nav">
+        <main class="main-content flex-grow-1" style="margin-left: 260px; min-height: 100vh;">
+            <!-- Top Navigation -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
                 <div class="container-fluid">
-                    <div class="nav-left">
-                        <button class="btn-premium-ghost mobile-menu-btn d-lg-none" type="button" onclick="toggleSidebar()">
-                            <i class="fas fa-bars"></i>
-                        </button>
-                        
-                        <div class="breadcrumb-nav">
-                            <span class="breadcrumb-item">@ViewData["Title"]</span>
-                        </div>
-                    </div>
+                    <button class="btn btn-outline-secondary d-lg-none me-3" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
                     
-                    <div class="nav-right">
-                        <!-- Search -->
-                        <div class="search-box">
-                            <div class="search-input-group">
-                                <i class="fas fa-search search-icon"></i>
-                                <input type="text" class="search-input" placeholder="Cerca mezzi, parcheggi..." />
+                    <div class="navbar-nav ms-auto">
+                        @if (User.Identity?.IsAuthenticated != true)
+                        {
+                            <div class="d-flex gap-2">
+                                <a href="/Auth/Login" class="btn btn-outline-primary">
+                                    Accedi
+                                </a>
+                                <a href="/Auth/Register" class="btn btn-primary">
+                                    Registrati
+                                </a>
                             </div>
-                        </div>
-                        
-                        <!-- Notifications -->
-                        <div class="nav-item dropdown">
-                            <button class="nav-btn" id="notificationDropdown" data-bs-toggle="dropdown">
-                                <i class="fas fa-bell"></i>
-                                <span class="notification-badge">0</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end premium-dropdown">
-                                <li class="dropdown-header">
-                                    <i class="fas fa-bell"></i>
-                                    Notifiche
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li class="dropdown-item-custom">
-                                    <div class="empty-state">
-                                        <i class="fas fa-bell-slash"></i>
-                                        <span>Nessuna notifica</span>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                        
-                        <!-- Theme Toggle -->
-                        <button id="themeToggle" class="nav-btn">
-                            <i class="fas fa-moon"></i>
-                        </button>
-                        
-                        <!-- User Menu -->
-                        <div class="nav-item dropdown">
-                            <button class="nav-btn user-btn" id="userDropdown" data-bs-toggle="dropdown">
-                                <div class="user-avatar-small">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end premium-dropdown">
-                                <li class="dropdown-header">
-                                    <div class="user-info-dropdown">
-                                        <div class="user-avatar-dropdown">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <div>
-                                            <div class="user-name-dropdown">Admin</div>
-                                            <div class="user-email-dropdown">admin@sharingmezzi.it</div>
-                                        </div>
-                                    </div>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="/Profile"><i class="fas fa-user"></i> Profilo</a></li>
-                                <li><a class="dropdown-item" href="/Settings"><i class="fas fa-cog"></i> Impostazioni</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item logout-item" href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-                            </ul>
-                        </div>
+                        }
+                        else
+                        {
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-user me-2"></i>@(User.Identity.Name ?? "Utente")
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="/Profile"><i class="fas fa-user me-2"></i>Profilo</a></li>
+                                    <li><a class="dropdown-item" href="/Settings"><i class="fas fa-cog me-2"></i>Impostazioni</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="/Auth/Logout"><i class="fas fa-sign-out-alt me-2"></i>Disconnetti</a></li>
+                                </ul>
+                            </div>
+                        }
                     </div>
                 </div>
             </nav>
 
             <!-- Page Content -->
-            <main class="main-content">
-                <div class="container-fluid">
-                    @RenderBody()
-                </div>
-            </main>
-        </div>
+            <div class="container-fluid p-4">
+                @RenderBody()
+            </div>
+        </main>
     </div>
 
-    <!-- Bootstrap 5.3 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Premium JS -->
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+    
+    <!-- Custom JavaScript -->
     <script src="~/js/premium-app.js" asp-append-version="true"></script>
     
     @await RenderSectionAsync("Scripts", required: false)
+
+    <!-- Theme Toggle Script -->
+    <script>
+        document.getElementById('themeToggle')?.addEventListener('click', function() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            this.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        });
+
+        // Mobile sidebar toggle
+        document.getElementById('sidebarToggle')?.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('d-none');
+        });
+    </script>
 </body>
 </html>

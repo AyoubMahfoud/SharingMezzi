@@ -172,5 +172,16 @@ namespace SharingMezzi.Web.Services
                 return false;
             }
         }
+
+        // Metodi aggiuntivi per compatibilità (opzionali)
+        public void SetAuthorizationToken(string token)
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        public void ClearAuthorizationToken()
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+        }
     }
 }

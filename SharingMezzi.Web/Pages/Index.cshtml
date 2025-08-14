@@ -1,264 +1,278 @@
-
 @page
 @model SharingMezzi.Web.Pages.IndexModel
 @{
-    ViewData["Title"] = "SharingMezzi - Benvenuto";
+    ViewData["Title"] = "SharingMezzi - Il Futuro della Mobilità";
     Layout = "~/Pages/Shared/_Layout.cshtml";
 }
 
-
-<div class="hero-section premium-card animate-fade-in-up" style="margin-top: 3rem;">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-8 text-center">
-                <h1 class="page-title mb-4">
-                    <i class="fas fa-bicycle text-gradient me-3"></i>
-                    Benvenuto su SharingMezzi
-                </h1>
-                <p class="page-subtitle mb-5">
-                    Il sistema di condivisione di mezzi di trasporto più conveniente e sostenibile.<br>
-                    <span class="text-gradient">Noleggia biciclette, monopattini e molto altro con un semplice click!</span>
-                </p>
-                <div class="row mb-5">
-                    <div class="col-md-4 mb-4">
-                        <div class="feature-card premium-card h-100">
-                            <div class="feature-icon">
-                                <i class="fas fa-bicycle bg-primary"></i>
-                            </div>
-                            <h3 class="text-gradient">Mezzi Disponibili</h3>
-                            <p>Oltre <span class="fw-bold">@Model.AvailableVehicles</span> mezzi disponibili in tutta la città</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-4">
-                        <div class="feature-card premium-card h-100">
-                            <div class="feature-icon">
-                                <i class="fas fa-leaf bg-success"></i>
-                            </div>
-                            <h3 class="text-gradient">100% Ecologico</h3>
-                            <p>Contribuisci alla riduzione delle emissioni di CO₂</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-4">
-                        <div class="feature-card premium-card h-100">
-                            <div class="feature-icon">
-                                <i class="fas fa-euro-sign bg-warning"></i>
-                            </div>
-                            <h3 class="text-gradient">Conveniente</h3>
-                            <p>Tariffe competitive e piani flessibili</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="cta-buttons mt-4">
-                    <a href="/Login" class="btn-premium btn-lg me-3">
-                        <i class="fas fa-sign-in-alt me-2"></i>
-                        Accedi
-                    </a>
-                    <a href="/Register" class="btn-premium-ghost btn-lg">
-                        <i class="fas fa-user-plus me-2"></i>
-                        Registrati
-                    </a>
-                </div>
-            </div>
-        </div>
+<!-- Status Indicator -->
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Attenzione:</strong> @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
-</div>
+}
 
-<!-- Sezione Come Funziona -->
-<div class="how-it-works-section py-5">
-    <div class="container">
-        <div class="row">
-            <div class="col-12 text-center mb-5">
-                <h2 class="h1 fw-bold">Come Funziona</h2>
-                <p class="lead text-muted">Semplice, veloce e conveniente</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4 text-center mb-4">
-                <div class="step-card">
-                    <div class="step-number">1</div>
-                    <h4>Registrati</h4>
-                    <p>Crea il tuo account in pochi secondi</p>
-                </div>
-            </div>
-            <div class="col-md-4 text-center mb-4">
-                <div class="step-card">
-                    <div class="step-number">2</div>
-                    <h4>Trova un Mezzo</h4>
-                    <p>Localizza il mezzo più vicino a te</p>
-                </div>
-            </div>
-            <div class="col-md-4 text-center mb-4">
-                <div class="step-card">
-                    <div class="step-number">3</div>
-                    <h4>Inizia il Viaggio</h4>
-                    <p>Sblocca e parti per la tua destinazione</p>
-                </div>
-            </div>
-        </div>
+@if (Model.IsDataLoaded)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        <strong>Dati aggiornati!</strong> Statistiche caricate dal database in tempo reale.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
-</div>
-                <span>-€5.50 ultima corsa</span>
-            </div>
-        </div>
-    </div>
+}
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="dashboard-card">
-            <div class="dashboard-card-icon bg-info text-white">
-                <i class="fas fa-leaf"></i>
-            </div>
-            <div class="dashboard-card-title">Punti Eco</div>
-            <div class="dashboard-card-value">@Model.EcoPoints</div>
-            <div class="dashboard-card-change positive">
-                <i class="fas fa-arrow-up"></i>
-                <span>+15 punti</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Quick Actions -->
-<div class="row mb-4">
+<!-- Hero Section -->
+<div class="row mb-5">
     <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-bolt text-primary"></i>
-                    Azioni Rapide
-                </h5>
+        <div class="hero-section text-center py-5 bg-primary text-white rounded position-relative">
+            <h1 class="display-4 fw-bold mb-4">
+                <i class="fas fa-bicycle me-3"></i>
+                Il Futuro della Mobilità è Qui
+            </h1>
+            <p class="lead mb-4">
+                Scopri un nuovo modo di muoverti in città. Sostenibile, conveniente e sempre a portata di click.
+            </p>
+            <div class="d-flex justify-content-center gap-3 mb-3">
+                <a href="/Vehicles" class="btn btn-light btn-lg">
+                    <i class="fas fa-rocket me-2"></i>
+                    Inizia Ora
+                </a>
+                <a href="/Map" class="btn btn-outline-light btn-lg">
+                    <i class="fas fa-map-marked-alt me-2"></i>
+                    Esplora Mappa
+                </a>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 col-6 mb-3">
-                        <a href="/Vehicles" class="btn btn-outline-primary btn-block h-100">
-                            <i class="fas fa-bicycle d-block mb-2" style="font-size: 2rem;"></i>
-                            <span>Trova Mezzo</span>
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-6 mb-3">
-                        <a href="/Parking" class="btn btn-outline-success btn-block h-100">
-                            <i class="fas fa-parking d-block mb-2" style="font-size: 2rem;"></i>
-                            <span>Parcheggi</span>
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-6 mb-3">
-                        <a href="/Billing" class="btn btn-outline-warning btn-block h-100">
-                            <i class="fas fa-credit-card d-block mb-2" style="font-size: 2rem;"></i>
-                            <span>Ricarica</span>
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-6 mb-3">
-                        <a href="/Trips" class="btn btn-outline-info btn-block h-100">
-                            <i class="fas fa-history d-block mb-2" style="font-size: 2rem;"></i>
-                            <span>Storico</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Recent Activity & Map -->
-<div class="row">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-map-marked-alt text-primary"></i>
-                    Mappa Mezzi e Parcheggi
-                </h5>
-            </div>
-            <div class="card-body">
-                <div id="map" style="height: 400px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                    <div class="text-center">
-                        <i class="fas fa-map fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">Mappa interattiva in caricamento...</p>
-                        <small class="text-muted">Qui verrà mostrata la mappa con i mezzi disponibili e i parcheggi nelle vicinanze</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-clock text-primary"></i>
-                    Attività Recenti
-                </h5>
-            </div>
-            <div class="card-body">
-                @if (Model.RecentTrips.Any())
+            
+            <!-- Real-time indicator -->
+            <div class="position-absolute top-0 end-0 m-3">
+                @if (Model.IsDataLoaded)
                 {
-                    <div class="timeline">
-                        @foreach (var trip in Model.RecentTrips.Take(5))
-                        {
-                            <div class="timeline-item">
-                                <div class="timeline-marker">
-                                    <i class="fas fa-bicycle"></i>
-                                </div>
-                                <div class="timeline-content">
-                                    <h6 class="timeline-title">@trip.Mezzo?.Modello</h6>
-                                    <p class="timeline-text">
-                                        Da @trip.ParcheggioPartenza?.Nome
-                                        @if (trip.ParcheggioDestinazione != null)
-                                        {
-                                            <text> a @trip.ParcheggioDestinazione.Nome</text>
-                                        }
-                                    </p>
-                                    <small class="text-muted">
-                                        @trip.Inizio.ToString("dd/MM/yyyy HH:mm") - 
-                                        Durata: @trip.DurataMinuti min - 
-                                        Costo: €@trip.CostoTotale
-                                    </small>
-                                </div>
-                            </div>
-                        }
-                    </div>
+                    <span class="badge bg-success d-flex align-items-center">
+                        <i class="fas fa-database me-1"></i>
+                        Dati Reali
+                    </span>
                 }
                 else
                 {
-                    <div class="text-center py-4">
-                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">Nessuna attività recente</p>
-                        <a href="/Vehicles" class="btn btn-primary btn-sm">
-                            <i class="fas fa-bicycle"></i> Inizia la tua prima corsa
-                        </a>
-                    </div>
+                    <span class="badge bg-warning d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Dati Demo
+                    </span>
                 }
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Weather Widget -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-cloud-sun text-primary"></i>
-                    Condizioni Meteo
-                </h5>
-            </div>
-            <div class="card-body text-center">
-                <div class="weather-widget">
-                    <div class="weather-icon">
-                        <i class="fas fa-sun fa-3x text-warning"></i>
-                    </div>
-                    <div class="weather-temp">22°C</div>
-                    <div class="weather-desc">Soleggiato</div>
-                    <div class="weather-details">
-                        <div class="row">
-                            <div class="col">
-                                <small class="text-muted">Vento</small>
-                                <div>15 km/h</div>
-                            </div>
-                            <div class="col">
-                                <small class="text-muted">Umidità</small>
-                                <div>65%</div>
-                            </div>
-                        </div>
-                    </div>
+<!-- Stats Section -->
+<div class="row mb-5">
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card text-center h-100 shadow-sm @(Model.AvailableVehicles > 0 ? "border-success" : "border-warning")">
+            <div class="card-body">
+                <div class="text-primary mb-3">
+                    <i class="fas fa-bicycle fa-3x"></i>
                 </div>
+                <h3 class="card-title" id="vehicleCount">@Model.AvailableVehicles</h3>
+                <p class="card-text text-muted">Mezzi Disponibili</p>
+                <small class="text-success">
+                    <i class="fas fa-arrow-up"></i> +@Model.VehicleGrowth.ToString("F1")%
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card text-center h-100 shadow-sm @(Model.ActiveUsers > 0 ? "border-success" : "border-warning")">
+            <div class="card-body">
+                <div class="text-success mb-3">
+                    <i class="fas fa-users fa-3x"></i>
+                </div>
+                <h3 class="card-title" id="userCount">@Model.ActiveUsers.ToString("N0")</h3>
+                <p class="card-text text-muted">Utenti Attivi</p>
+                <small class="text-success">
+                    <i class="fas fa-arrow-up"></i> +@Model.UserGrowth.ToString("F1")%
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card text-center h-100 shadow-sm @(Model.ActiveStations > 0 ? "border-success" : "border-warning")">
+            <div class="card-body">
+                <div class="text-warning mb-3">
+                    <i class="fas fa-map-marker-alt fa-3x"></i>
+                </div>
+                <h3 class="card-title" id="stationCount">@Model.ActiveStations</h3>
+                <p class="card-text text-muted">Stazioni</p>
+                <small class="text-success">
+                    <i class="fas fa-arrow-up"></i> +@Model.StationGrowth.ToString("F1")%
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card text-center h-100 shadow-sm @(Model.Co2Saved > 0 ? "border-success" : "border-warning")">
+            <div class="card-body">
+                <div class="text-info mb-3">
+                    <i class="fas fa-leaf fa-3x"></i>
+                </div>
+                <h3 class="card-title" id="co2Count">@Model.Co2Saved.ToString("N0")</h3>
+                <p class="card-text text-muted">Kg CO₂ Risparmiati</p>
+                <small class="text-success">
+                    <i class="fas fa-arrow-up"></i> +@Model.Co2Growth.ToString("F1")%
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Stats Row -->
+<div class="row mb-5">
+    <div class="col-md-6 mb-4">
+        <div class="card text-center h-100 shadow-sm">
+            <div class="card-body">
+                <div class="text-purple mb-3">
+                    <i class="fas fa-route fa-3x" style="color: #6f42c1;"></i>
+                </div>
+                <h3 class="card-title" id="tripCount">@Model.CompletedTrips.ToString("N0")</h3>
+                <p class="card-text text-muted">Viaggi Completati</p>
+                <small class="text-muted">
+                    <i class="fas fa-clock"></i> Totale storico
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card text-center h-100 shadow-sm">
+            <div class="card-body">
+                <div class="text-dark mb-3">
+                    <i class="fas fa-road fa-3x"></i>
+                </div>
+                <h3 class="card-title" id="kmCount">@Model.KilometersToday.ToString("N0")</h3>
+                <p class="card-text text-muted">Km Percorsi</p>
+                <small class="text-muted">
+                    <i class="fas fa-calendar-day"></i> Totale
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h2 class="text-center mb-5">Perché Scegliere <span class="text-primary">SharingMezzi</span></h2>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <div class="text-primary mb-3">
+                    <i class="fas fa-bolt fa-3x"></i>
+                </div>
+                <h4 class="card-title">Veloce & Facile</h4>
+                <p class="card-text">
+                    Sblocca qualsiasi mezzo in secondi con la nostra app. QR code, geolocalizzazione e pagamento integrato.
+                </p>
+                <ul class="list-unstyled text-start">
+                    <li><i class="fas fa-check text-success me-2"></i> Sblocco istantaneo</li>
+                    <li><i class="fas fa-check text-success me-2"></i> GPS integrato</li>
+                    <li><i class="fas fa-check text-success me-2"></i> Pagamento automatico</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <div class="text-success mb-3">
+                    <i class="fas fa-leaf fa-3x"></i>
+                </div>
+                <h4 class="card-title">100% Sostenibile</h4>
+                <p class="card-text">
+                    Riduci la tua impronta di carbonio e contribuisci a un futuro più verde per la tua città.
+                </p>
+                <ul class="list-unstyled text-start">
+                    <li><i class="fas fa-check text-success me-2"></i> Zero emissioni</li>
+                    <li><i class="fas fa-check text-success me-2"></i> Energia rinnovabile</li>
+                    <li><i class="fas fa-check text-success me-2"></i> Impatto positivo</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <div class="text-warning mb-3">
+                    <i class="fas fa-euro-sign fa-3x"></i>
+                </div>
+                <h4 class="card-title">Conveniente</h4>
+                <p class="card-text">
+                    Tariffe trasparenti e competitive. Paga solo quello che usi, senza costi nascosti.
+                </p>
+                <ul class="list-unstyled text-start">
+                    <li><i class="fas fa-check text-success me-2"></i> Da €0.15/min</li>
+                    <li><i class="fas fa-check text-success me-2"></i> Senza abbonamenti</li>
+                    <li><i class="fas fa-check text-success me-2"></i> Offerte speciali</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CTA Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="card bg-light text-center py-5">
+            <div class="card-body">
+                <h2 class="card-title mb-4">Pronto per Iniziare?</h2>
+                <p class="card-text lead mb-4">
+                    Unisciti a <span class="fw-bold text-primary">@Model.ActiveUsers.ToString("N0")</span> utenti che hanno già scelto la mobilità del futuro
+                </p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="/Auth/Register" class="btn btn-primary btn-lg">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Registrati Gratis
+                    </a>
+                    <a href="/Vehicles" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-eye me-2"></i>
+                        Esplora @Model.AvailableVehicles Mezzi
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Source Info -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info d-flex align-items-center">
+            <i class="fas fa-info-circle me-2"></i>
+            <div>
+                <strong>Fonte Dati:</strong> 
+                @if (Model.IsDataLoaded)
+                {
+                    <span class="text-success">Database Backend - Dati aggiornati in tempo reale</span>
+                }
+                else
+                {
+                    <span class="text-warning">Dati Demo - Backend non disponibile, utilizzando dati di esempio</span>
+                }
+                <br>
+                <small class="text-muted">
+                    Ultimo aggiornamento: @DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")
+                    | <button class="btn btn-link btn-sm p-0" onclick="refreshStats()">
+                        <i class="fas fa-sync-alt"></i> Aggiorna
+                    </button>
+                </small>
             </div>
         </div>
     </div>
@@ -266,193 +280,250 @@
 
 @section Scripts {
     <script>
-        // Dashboard specific scripts
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load real-time data
-            loadDashboardData();
-            
-            // Initialize map (placeholder)
-            initializeMap();
-            
-            // Refresh data every 30 seconds
-            setInterval(loadDashboardData, 30000);
-        });
+        let refreshing = false;
         
-        function loadDashboardData() {
-            // Fetch updated dashboard data
-            fetch('/api/dashboard/stats', {
-                headers: {
-                    'Authorization': `Bearer ${app.getToken()}`
+        // Funzione per aggiornare le statistiche
+        async function refreshStats() {
+            if (refreshing) return;
+            
+            refreshing = true;
+            const refreshBtn = document.querySelector('[onclick="refreshStats()"]');
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aggiornando...';
+            
+            try {
+                const response = await fetch('/Index?handler=RefreshStats');
+                const data = await response.json();
+                
+                if (data.error) {
+                    showAlert('Errore durante l\'aggiornamento: ' + data.error, 'danger');
+                } else {
+                    // Aggiorna i valori con animazione
+                    updateCounterWithAnimation('vehicleCount', data.availableVehicles);
+                    updateCounterWithAnimation('userCount', data.activeUsers.toLocaleString());
+                    updateCounterWithAnimation('stationCount', data.activeStations);
+                    updateCounterWithAnimation('co2Count', data.co2Saved.toLocaleString());
+                    updateCounterWithAnimation('tripCount', data.completedTrips.toLocaleString());
+                    updateCounterWithAnimation('kmCount', data.kilometersToday.toLocaleString());
+                    
+                    // Mostra messaggio di successo
+                    if (data.isDataLoaded) {
+                        showAlert('Dati aggiornati con successo dal database!', 'success');
+                    } else {
+                        showAlert('Backend non disponibile, utilizzando dati demo.', 'warning');
+                    }
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Update dashboard cards with real data
-                console.log('Dashboard data loaded:', data);
-            })
-            .catch(error => console.error('Error loading dashboard data:', error));
-        }
-        
-        function initializeMap() {
-            // Initialize OpenStreetMap (placeholder)
-            const mapElement = document.getElementById('map');
-            if (mapElement) {
-                // Here you would initialize OpenStreetMap with Leaflet
-                // For now, we'll just add a placeholder
-                setTimeout(() => {
-                    mapElement.innerHTML = `
-                        <div class="text-center">
-                            <i class="fas fa-map fa-3x text-primary mb-3"></i>
-                            <p class="text-primary">Mappa OpenStreetMap</p>
-                            <small class="text-muted">Integrazione con OpenStreetMap sarà implementata qui</small>
-                        </div>
-                    `;
-                }, 2000);
+            } catch (error) {
+                console.error('Errore refresh:', error);
+                showAlert('Errore di connessione durante l\'aggiornamento.', 'danger');
+            } finally {
+                refreshBtn.innerHTML = originalText;
+                refreshing = false;
             }
         }
+        
+        // Aggiorna un contatore con animazione
+        function updateCounterWithAnimation(elementId, newValue) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            element.style.transform = 'scale(1.1)';
+            element.style.color = '#28a745';
+            
+            setTimeout(() => {
+                element.textContent = newValue;
+                element.style.transform = 'scale(1)';
+                element.style.color = '';
+            }, 150);
+        }
+        
+        // Mostra alert temporaneo
+        function showAlert(message, type) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show position-fixed" 
+                     style="top: 20px; right: 20px; z-index: 9999; max-width: 400px;" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'exclamation-triangle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-remove dopo 5 secondi
+            setTimeout(() => {
+                const alert = document.querySelector('.alert.position-fixed');
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+        
+        // Auto-refresh ogni 2 minuti se i dati sono reali
+        @if (Model.IsDataLoaded)
+        {
+            <text>
+            setInterval(async () => {
+                if (!refreshing) {
+                    try {
+                        await refreshStats();
+                    } catch (error) {
+                        console.log('Auto-refresh failed:', error);
+                    }
+                }
+            }, 120000); // 2 minuti
+            </text>
+        }
+        
+        // Indicatore di connessione backend
+        function checkBackendConnection() {
+            const indicator = document.createElement('div');
+            indicator.className = 'position-fixed bottom-0 end-0 m-3';
+            
+            @if (Model.IsDataLoaded)
+            {
+                <text>
+                indicator.innerHTML = `
+                    <span class="badge bg-success d-flex align-items-center">
+                        <i class="fas fa-circle me-1" style="font-size: 0.6rem;"></i>
+                        Backend Connesso
+                    </span>
+                `;
+                </text>
+            }
+            else
+            {
+                <text>
+                indicator.innerHTML = `
+                    <span class="badge bg-warning d-flex align-items-center">
+                        <i class="fas fa-circle me-1" style="font-size: 0.6rem;"></i>
+                        Backend Offline
+                    </span>
+                `;
+                </text>
+            }
+            
+            document.body.appendChild(indicator);
+        }
+        
+        // Inizializza indicatori
+        document.addEventListener('DOMContentLoaded', function() {
+            checkBackendConnection();
+            
+            // Log per debug
+            console.log('📊 Homepage Stats:', {
+                isDataLoaded: @Model.IsDataLoaded.ToString().ToLower(),
+                vehicles: @Model.AvailableVehicles,
+                users: @Model.ActiveUsers,
+                stations: @Model.ActiveStations,
+                co2Saved: @Model.Co2Saved,
+                hasError: '@Model.ErrorMessage' !== ''
+            });
+        });
     </script>
-    
-    <style>
-        .timeline {
-            position: relative;
-            padding-left: 2rem;
-        }
-        
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 1rem;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: #e9ecef;
-        }
-        
-        .timeline-item {
-            position: relative;
-            margin-bottom: 1.5rem;
-        }
-        
-        .timeline-marker {
-            position: absolute;
-            left: -2rem;
-            width: 2rem;
-            height: 2rem;
-            background: #007bff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.8rem;
-        }
-        
-        .timeline-title {
-            margin-bottom: 0.25rem;
-            font-weight: 600;
-        }
-        
-        .timeline-text {
-            margin-bottom: 0.25rem;
-            color: #6c757d;
-        }
-        
-        .weather-widget {
-            text-align: center;
-        }
-        
-        .weather-temp {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .weather-desc {
-            color: #6c757d;
-            margin-bottom: 1rem;
-        }
-        
-        .weather-details {
-            font-size: 0.9rem;
-        }
-        
-        .btn-block {
-            width: 100%;
-            text-align: center;
-            padding: 1rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-block:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-    </style>
-
-<style>
-    .hero-section {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        min-height: 80vh;
-        display: flex;
-        align-items: center;
-        padding: 4rem 0;
-    }
-    
-    .feature-card {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        text-align: center;
-        transition: transform 0.3s ease;
-        border: none;
-    }
-    
-    .feature-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-    
-    .feature-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-    }
-    
-    .cta-buttons {
-        margin-top: 2rem;
-    }
-    
-    .how-it-works-section {
-        background: white;
-    }
-    
-    .step-card {
-        padding: 2rem;
-    }
-    
-    .step-number {
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, #007bff, #0056b3);
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin: 0 auto 1rem;
-    }
-    
-    .step-card h4 {
-        margin-bottom: 1rem;
-        color: #333;
-    }
-    
-    .step-card p {
-        color: #6c757d;
-        margin-bottom: 0;
-    }
-</style>
 }
+<!-- Debug Section (solo in development) -->
+@if (ViewContext.HttpContext.RequestServices.GetService<IWebHostEnvironment>()?.IsDevelopment() == true)
+{
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#debugInfo">
+                            🔧 Debug Information
+                        </button>
+                    </h5>
+                </div>
+                <div id="debugInfo" class="collapse">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Valori Caricati:</h6>
+                                <ul class="list-unstyled">
+                                    <li><strong>Mezzi:</strong> @Model.AvailableVehicles</li>
+                                    <li><strong>Utenti:</strong> @Model.ActiveUsers</li>
+                                    <li><strong>Stazioni:</strong> @Model.ActiveStations</li>
+                                    <li><strong>Viaggi:</strong> @Model.CompletedTrips</li>
+                                    <li><strong>Km:</strong> @Model.KilometersToday</li>
+                                    <li><strong>CO₂:</strong> @Model.Co2Saved</li>
+                                </ul>
+                                
+                                <h6>Stato:</h6>
+                                <ul class="list-unstyled">
+                                    <li><strong>Data Loaded:</strong> @Model.IsDataLoaded</li>
+                                    <li><strong>Error:</strong> @(string.IsNullOrEmpty(Model.ErrorMessage) ? "Nessuno" : Model.ErrorMessage)</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Log Debug:</h6>
+                                <div class="bg-light p-2" style="max-height: 300px; overflow-y: auto;">
+                                    @if (Model.DebugMessages.Any())
+                                    {
+                                        @foreach (var message in Model.DebugMessages)
+                                        {
+                                            <div class="small">@message</div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted">Nessun messaggio di debug</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-primary" onclick="testApiDirectly()">
+                                Test API Diretto
+                            </button>
+                            <button class="btn btn-sm btn-info" onclick="refreshStats()">
+                                Refresh Debug
+                            </button>
+                        </div>
+                        
+                        <div id="apiTestResult" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<script>
+// Test API diretto per debug
+async function testApiDirectly() {
+    const resultDiv = document.getElementById('apiTestResult');
+    resultDiv.innerHTML = '<div class="alert alert-info">Testing API endpoints...</div>';
+    
+    const endpoints = [
+        '/api/mezzi',
+        '/api/utenti', 
+        '/api/parcheggi',
+        '/api/viaggi'
+    ];
+    
+    let results = '<div class="alert alert-secondary"><h6>Risultati Test API:</h6>';
+    
+    for (const endpoint of endpoints) {
+        try {
+            const response = await fetch('http://localhost:5000' + endpoint);
+            const status = response.status;
+            const text = await response.text();
+            
+            results += `<div><strong>${endpoint}:</strong> `;
+            if (response.ok) {
+                results += `<span class="text-success">✅ ${status} - ${text.length} chars</span>`;
+            } else {
+                results += `<span class="text-danger">❌ ${status}</span>`;
+            }
+            results += '</div>';
+        } catch (error) {
+            results += `<div><strong>${endpoint}:</strong> <span class="text-danger">❌ ${error.message}</span></div>`;
+        }
+    }
+    
+    results += '</div>';
+    resultDiv.innerHTML = results;
+}
+</script>
