@@ -5,88 +5,169 @@
     ViewData["Title"] = "Mezzi Disponibili";
 }
 
-<div class="page-header">
-    <h1 class="page-title">Mezzi Disponibili</h1>
-    <p class="page-subtitle">Trova e prenota il mezzo più vicino a te</p>
-</div>
+<div class="animate-fade-in-up">
+    <!-- Header Section -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-bicycle text-primary me-3"></i>
+            Mezzi Disponibili
+        </h1>
+        <p class="page-subtitle">Trova e prenota il mezzo perfetto per il tuo viaggio</p>
+    </div>
 
-<!-- Filter Section -->
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-md-3">
-                <label for="vehicleType" class="form-label">Tipo Mezzo</label>
-                <select id="vehicleType" class="form-control" onchange="filterVehicles()">
-                    <option value="">Tutti i mezzi</option>
-                    <option value="0">Biciclette</option>
-                    <option value="1">E-Bike</option>
-                    <option value="2">Scooter</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="batteryLevel" class="form-label">Livello Batteria</label>
-                <select id="batteryLevel" class="form-control" onchange="filterVehicles()">
-                    <option value="">Qualsiasi</option>
-                    <option value="80">Sopra 80%</option>
-                    <option value="50">Sopra 50%</option>
-                    <option value="20">Sopra 20%</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="maxDistance" class="form-label">Distanza Max</label>
-                <select id="maxDistance" class="form-control" onchange="filterVehicles()">
-                    <option value="">Qualsiasi</option>
-                    <option value="500">500m</option>
-                    <option value="1000">1km</option>
-                    <option value="2000">2km</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary" onclick="refreshVehicles()">
-                        <i class="fas fa-sync-alt"></i> Aggiorna
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="toggleMapView()">
-                        <i class="fas fa-map"></i> Mappa
-                    </button>
+    <!-- Filters Section -->
+    <div class="filter-section animate-fade-in-up" style="animation-delay: 0.1s;">
+        <div class="premium-card">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
+                        <div class="filter-group">
+                            <label class="filter-label">
+                                <i class="fas fa-cogs me-2"></i>
+                                Tipo Mezzo
+                            </label>
+                            <select class="form-select premium-select" id="vehicleType" onchange="filterVehicles()">
+                                <option value="">Tutti i mezzi</option>
+                                <option value="0">Biciclette</option>
+                                <option value="1">E-Bike</option>
+                                <option value="2">Scooter</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
+                        <div class="filter-group">
+                            <label class="filter-label">
+                                <i class="fas fa-battery-full me-2"></i>
+                                Batteria Min.
+                            </label>
+                            <select class="form-select premium-select" id="batteryLevel" onchange="filterVehicles()">
+                                <option value="">Qualsiasi</option>
+                                <option value="80">Sopra 80%</option>
+                                <option value="50">Sopra 50%</option>
+                                <option value="20">Sopra 20%</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
+                        <div class="filter-group">
+                            <label class="filter-label">
+                                <i class="fas fa-map-marker-alt me-2"></i>
+                                Distanza Max
+                            </label>
+                            <select class="form-select premium-select" id="maxDistance" onchange="filterVehicles()">
+                                <option value="">Qualsiasi</option>
+                                <option value="500">500m</option>
+                                <option value="1000">1km</option>
+                                <option value="2000">2km</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="filter-actions">
+                            <button class="btn-premium" onclick="refreshVehicles()">
+                                <i class="fas fa-sync-alt"></i>
+                                Aggiorna
+                            </button>
+                            <button class="btn-premium-ghost" onclick="toggleMapView()">
+                                <i class="fas fa-map"></i>
+                                Mappa
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Map View (Initially Hidden) -->
-<div id="mapView" class="card mb-4" style="display: none;">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-map-marked-alt text-primary"></i>
-            Mappa Mezzi Disponibili
-        </h5>
-    </div>
-    <div class="card-body">
-        <div id="vehicleMap" style="height: 400px; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-            <div class="text-center">
-                <i class="fas fa-map fa-3x text-muted mb-3"></i>
-                <p class="text-muted">Mappa OpenStreetMap con mezzi disponibili</p>
-                <small class="text-muted">Qui verrà mostrata la mappa interattiva con i mezzi nelle vicinanze</small>
+    <!-- Map View (Initially Hidden) -->
+    <div id="mapView" class="premium-card animate-fade-in-up mb-4" style="display: none; animation-delay: 0.2s;">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h5 class="mb-0">
+                    <i class="fas fa-map-marked-alt text-primary me-2"></i>
+                    Mappa Mezzi Disponibili
+                </h5>
+                <button class="btn-premium-ghost btn-sm" onclick="toggleMapView()">
+                    <i class="fas fa-times"></i>
+                    Chiudi
+                </button>
+            </div>
+            <div id="vehicleMap" class="map-container">
+                <div class="map-placeholder">
+                    <div class="map-icon">
+                        <i class="fas fa-map fa-3x text-primary mb-3"></i>
+                    </div>
+                    <h6>Mappa OpenStreetMap</h6>
+                    <p class="text-muted mb-0">Qui verranno mostrati i mezzi disponibili sulla mappa</p>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Vehicles Grid -->
-<div class="row" id="vehiclesGrid">
-    @if (Model.Vehicles.Any())
-    {
-        @foreach (var vehicle in Model.Vehicles)
-        {
-            <div class="col-lg-4 col-md-6 mb-4 vehicle-card" 
-                 data-type="@((int)vehicle.Tipo)" 
-                 data-battery="@(vehicle.LivelloBatteria ?? 100)">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <h5 class="card-title">
+    <!-- Stats Bar -->
+    <div class="stats-bar animate-fade-in-up" style="animation-delay: 0.3s;">
+        <div class="row">
+            <div class="col-6 col-md-3 mb-3">
+                <div class="stat-item">
+                    <div class="stat-icon bg-primary">
+                        <i class="fas fa-bicycle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">@Model.Vehicles.Count</div>
+                        <div class="stat-label">Mezzi Totali</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-3">
+                <div class="stat-item">
+                    <div class="stat-icon bg-success">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">@Model.Vehicles.Count(v => v.Stato == VehicleStatus.Disponibile)</div>
+                        <div class="stat-label">Disponibili</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-3">
+                <div class="stat-item">
+                    <div class="stat-icon bg-warning">
+                        <i class="fas fa-battery-three-quarters"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">@Model.Vehicles.Count(v => v.LivelloBatteria >= 50)</div>
+                        <div class="stat-label">Carica 50%+</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-3">
+                <div class="stat-item">
+                    <div class="stat-icon bg-info">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">3</div>
+                        <div class="stat-label">Zone Attive</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicles Grid -->
+    <div class="vehicles-grid">
+        <div class="row" id="vehiclesGrid">
+            @if (Model.Vehicles.Any())
+            {
+                @foreach (var vehicle in Model.Vehicles)
+                {
+                    <div class="col-xl-4 col-lg-6 mb-4 vehicle-card-container animate-fade-in-up" 
+                         style="animation-delay: @(0.4 + Model.Vehicles.ToList().IndexOf(vehicle) * 0.1)s;"
+                         data-type="@((int)vehicle.Tipo)" 
+                         data-battery="@(vehicle.LivelloBatteria ?? 100)">
+                        <div class="vehicle-card">
+                            <!-- Vehicle Image -->
+                            <div class="vehicle-image">
                                 @{
                                     var icon = vehicle.Tipo switch
                                     {
@@ -96,115 +177,868 @@
                                         _ => "fas fa-bicycle"
                                     };
                                 }
-                                <i class="@icon me-2"></i>
-                                @vehicle.Modello
-                            </h5>
-                            <span class="badge badge-status status-@(vehicle.Stato.ToString().ToLower().Replace("_", "-"))">
-                                @vehicle.Stato
-                            </span>
-                        </div>
-
-                        <div class="vehicle-details">
-                            <div class="row mb-2">
-                                <div class="col-6">
-                                    <small class="text-muted">Tipo:</small>
-                                    <div class="fw-bold">@vehicle.Tipo</div>
-                                </div>
-                                <div class="col-6">
-                                    <small class="text-muted">Elettrico:</small>
-                                    <div class="fw-bold">
-                                        @if (vehicle.IsElettrico)
+                                <i class="@icon vehicle-icon"></i>
+                                <div class="vehicle-badge">
+                                    <span class="badge @(vehicle.Stato == VehicleStatus.Disponibile ? "bg-success" : "bg-warning")">
+                                        @if (vehicle.Stato == VehicleStatus.Disponibile)
                                         {
-                                            <text><i class="fas fa-bolt text-success"></i> Sì</text>
+                                            <i class="fas fa-check-circle"></i>
+                                            <text>Disponibile</text>
                                         }
                                         else
                                         {
-                                            <text><i class="fas fa-times text-muted"></i> No</text>
+                                            <i class="fas fa-clock"></i>
+                                            <text>@vehicle.Stato</text>
                                         }
-                                    </div>
+                                    </span>
                                 </div>
                             </div>
 
-                            @if (vehicle.IsElettrico && vehicle.LivelloBatteria.HasValue)
-                            {
-                                <div class="mb-3">
-                                    <small class="text-muted">Livello Batteria:</small>
-                                    <div class="progress mt-1">
-                                        <div class="progress-bar @(vehicle.LivelloBatteria > 50 ? "bg-success" : vehicle.LivelloBatteria > 20 ? "bg-warning" : "bg-danger")" 
-                                             role="progressbar" 
-                                             style="width: @(vehicle.LivelloBatteria)%">
-                                            @(vehicle.LivelloBatteria)%
+                            <!-- Vehicle Info -->
+                            <div class="vehicle-info">
+                                <div class="vehicle-header">
+                                    <h5 class="vehicle-title">@vehicle.Modello</h5>
+                                    <div class="vehicle-id">#@vehicle.Id</div>
+                                </div>
+
+                                <div class="vehicle-details">
+                                    <div class="detail-row">
+                                        <div class="detail-item">
+                                            <i class="fas fa-cog text-primary"></i>
+                                            <span>@vehicle.Tipo</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            @if (vehicle.IsElettrico)
+                                            {
+                                                <i class="fas fa-bolt text-success"></i>
+                                                <span>Elettrico</span>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-muscle text-info"></i>
+                                                <span>Meccanico</span>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    @if (vehicle.IsElettrico && vehicle.LivelloBatteria.HasValue)
+                                    {
+                                        <!-- Battery Status -->
+                                        <div class="battery-status">
+                                            <div class="battery-header">
+                                                <span class="battery-label">
+                                                    <i class="fas fa-battery-@(GetBatteryIcon(vehicle.LivelloBatteria.Value))"></i>
+                                                    Batteria
+                                                </span>
+                                                <span class="battery-percentage">@vehicle.LivelloBatteria%</span>
+                                            </div>
+                                            <div class="battery-bar">
+                                                <div class="battery-fill" style="width: @vehicle.LivelloBatteria%; background-color: @GetBatteryColor(vehicle.LivelloBatteria.Value);"></div>
+                                            </div>
+                                        </div>
+                                    }
+
+                                    <!-- Pricing Info -->
+                                    <div class="pricing-info">
+                                        <div class="price-item">
+                                            <i class="fas fa-play-circle text-primary"></i>
+                                            <span>€@vehicle.TariffaFissa di base</span>
+                                        </div>
+                                        <div class="price-item">
+                                            <i class="fas fa-clock text-warning"></i>
+                                            <span>€@vehicle.TariffaPerMinuto/min</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Location Info -->
+                                    @if (vehicle.Parcheggio != null)
+                                    {
+                                        <div class="location-info">
+                                            <div class="location-detail">
+                                                <i class="fas fa-map-marker-alt text-danger"></i>
+                                                <span>@vehicle.Parcheggio.Nome</span>
+                                            </div>
+                                            <div class="location-detail">
+                                                <i class="fas fa-walking text-info"></i>
+                                                <span>~@(new Random().Next(2, 15)) min a piedi</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="vehicle-actions">
+                                    @if (vehicle.Stato == VehicleStatus.Disponibile)
+                                    {
+                                        <button class="btn-premium flex-fill" onclick="unlockVehicle(@vehicle.Id)">
+                                            <i class="fas fa-unlock"></i>
+                                            Sblocca
+                                        </button>
+                                        <button class="btn-premium-ghost" onclick="showVehicleDetails(@vehicle.Id)">
+                                            <i class="fas fa-info-circle"></i>
+                                            Dettagli
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-secondary flex-fill" disabled>
+                                            <i class="fas fa-ban"></i>
+                                            Non Disponibile
+                                        </button>
+                                    }
+                                </div>
+                                
+                                <div class="mt-2">
+                                    <button class="btn-premium-ghost btn-sm w-100" onclick="reportMaintenance(@vehicle.Id)">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Segnala Problema
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12">
+                    <div class="empty-state animate-fade-in-up">
+                        <div class="premium-card">
+                            <div class="card-body text-center py-5">
+                                <div class="empty-icon mb-4">
+                                    <i class="fas fa-bicycle fa-4x text-muted"></i>
+                                </div>
+                                <h4 class="mb-3">Nessun mezzo disponibile</h4>
+                                <p class="text-muted mb-4">
+                                    Non ci sono mezzi disponibili in questo momento.<br>
+                                    Riprova più tardi.
+                                </p>
+                                <button class="btn-premium" onclick="refreshVehicles()">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Aggiorna Lista
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetBatteryIcon(int percentage)
+    {
+        return percentage switch
+        {
+            >= 80 => "full",
+            >= 60 => "three-quarters",
+            >= 40 => "half",
+            >= 20 => "quarter",
+            _ => "empty"
+        };
+    }
+
+    private string GetBatteryColor(int percentage)
+    {
+        return percentage switch
+        {
+            >= 70 => "var(--success)",
+            >= 40 => "var(--warning)",
+            _ => "var(--danger)"
+        };
+    }
+}
+
+<style>
+.filter-section {
+    margin-bottom: var(--space-xl);
+}
+
+.filter-group {
+    height: 100%;
+}
+
+.filter-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: var(--space-sm);
+    display: block;
+}
+
+.premium-select {
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all var(--transition-medium);
+}
+
+.premium-select:focus {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.filter-actions {
+    display: flex;
+    gap: var(--space-sm);
+    height: 100%;
+    align-items: flex-end;
+}
+
+.filter-actions .btn-premium,
+.filter-actions .btn-premium-ghost {
+    flex: 1;
+    min-height: 50px;
+}
+
+.map-container {
+    height: 400px;
+    background: linear-gradient(135deg, var(--gray-100), var(--gray-50));
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.map-placeholder {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--space-lg);
+}
+
+.stats-bar {
+    margin-bottom: var(--space-xl);
+}
+
+.stat-item {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    height: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-medium);
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1;
+    margin-bottom: var(--space-xs);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    font-weight: 500;
+}
+
+.vehicles-grid {
+    margin-bottom: var(--space-xl);
+}
+
+.vehicle-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: var(--shadow-lg);
+    transition: all var(--transition-medium);
+    height: 100%;
+}
+
+.vehicle-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-xl);
+}
+
+.vehicle-image {
+    position: relative;
+    height: 160px;
+    background: linear-gradient(135deg, var(--primary-100), var(--primary-50));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.vehicle-icon {
+    font-size: 4rem;
+    color: var(--primary-600);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.vehicle-badge {
+    position: absolute;
+    top: var(--space-md);
+    right: var(--space-md);
+}
+
+.vehicle-badge .badge {
+    font-size: 0.75rem;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+}
+
+.vehicle-info {
+    padding: var(--space-xl);
+}
+
+.vehicle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+}
+
+.vehicle-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.vehicle-id {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    font-weight: 600;
+}
+
+.detail-row {
+    display: flex;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 0.875rem;
+    color: var(--gray-700);
+}
+
+.battery-status {
+    margin-bottom: var(--space-lg);
+}
+
+.battery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+}
+
+.battery-label {
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    font-weight: 600;
+}
+
+.battery-percentage {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.battery-bar {
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.battery-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width var(--transition-medium);
+}
+
+.pricing-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--space-lg);
+}
+
+.price-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    font-weight: 600;
+}
+
+.location-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--space-lg);
+}
+
+.location-detail {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 0.75rem;
+    color: var(--gray-600);
+}
+
+.vehicle-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: auto;
+    margin-bottom: var(--space-md);
+}
+
+.empty-state {
+    margin-top: var(--space-xl);
+}
+
+.empty-icon {
+    opacity: 0.3;
+}
+
+/* Responsive adjustments */
+@@media (max-width: 768px) {
+    .filter-actions {
+        flex-direction: column;
+    }
+    
+    .filter-actions .btn-premium,
+    .filter-actions .btn-premium-ghost {
+        flex: none;
+        width: 100%;
+    }
+    
+    .detail-row {
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+    
+    .pricing-info,
+    .location-info {
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+    
+    .vehicle-actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<!-- Vehicle Details Modal -->
+<div class="modal fade" id="vehicleDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content premium-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle text-primary me-2"></i>
+                    Dettagli Mezzo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="vehicleDetailsContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Caricamento...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-premium-ghost" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Report Modal -->
+<div class="modal fade" id="maintenanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content premium-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    Segnala Problema
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="maintenanceForm">
+                    <input type="hidden" id="maintenanceVehicleId" name="vehicleId">
+                    <div class="mb-3">
+                        <label for="maintenanceDescription" class="form-label">Descrizione del problema</label>
+                        <textarea class="form-control" id="maintenanceDescription" name="description" rows="4" required
+                                  placeholder="Descrivi il problema riscontrato..." style="border-radius: var(--radius-lg);"></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        La tua segnalazione ci aiuterà a mantenere i mezzi in perfette condizioni.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-premium-ghost" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn-premium" onclick="submitMaintenanceReport()">
+                    <i class="fas fa-paper-plane"></i>
+                    Invia Segnalazione
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let vehicles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Vehicles));
+        let filteredVehicles = vehicles;
+        let mapVisible = false;
+
+        function filterVehicles() {
+            const typeFilter = document.getElementById('vehicleType').value;
+            const batteryFilter = document.getElementById('batteryLevel').value;
+            const distanceFilter = document.getElementById('maxDistance').value;
+
+            const vehicleCards = document.querySelectorAll('.vehicle-card-container');
+            
+            vehicleCards.forEach(card => {
+                let show = true;
+                
+                if (typeFilter && card.getAttribute('data-type') !== typeFilter) {
+                    show = false;
+                }
+                
+                if (batteryFilter && parseInt(card.getAttribute('data-battery')) < parseInt(batteryFilter)) {
+                    show = false;
+                }
+                
+                // Distance filter would require geolocation implementation
+                
+                card.style.display = show ? 'block' : 'none';
+            });
+
+            // Add fade effect
+            vehicleCards.forEach((card, index) => {
+                if (card.style.display !== 'none') {
+                    card.style.animationDelay = `${index * 0.1}s`;
+                }
+            });
+        }
+
+        function refreshVehicles() {
+            // Add loading state
+            const refreshBtn = document.querySelector('[onclick="refreshVehicles()"]');
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aggiornando...';
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+
+        function toggleMapView() {
+            const mapView = document.getElementById('mapView');
+            mapVisible = !mapVisible;
+            
+            if (mapVisible) {
+                mapView.style.display = 'block';
+                setTimeout(() => {
+                    mapView.classList.add('animate-fade-in-up');
+                    initializeVehicleMap();
+                }, 100);
+            } else {
+                mapView.style.display = 'none';
+            }
+        }
+
+        function initializeVehicleMap() {
+            const mapElement = document.getElementById('vehicleMap');
+            
+            // Simulate loading
+            setTimeout(() => {
+                mapElement.innerHTML = `
+                    <div class="map-placeholder">
+                        <div class="map-icon">
+                            <i class="fas fa-map fa-3x text-primary mb-3"></i>
+                        </div>
+                        <h6>Mappa OpenStreetMap</h6>
+                        <p class="text-muted mb-4">Qui verranno mostrati i mezzi disponibili sulla mappa</p>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="map-stat">
+                                    <div class="stat-number text-primary">${vehicles.length}</div>
+                                    <div class="stat-label">Mezzi</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="map-stat">
+                                    <div class="stat-number text-success">${vehicles.filter(v => v.stato === 0).length}</div>
+                                    <div class="stat-label">Disponibili</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="map-stat">
+                                    <div class="stat-number text-warning">3</div>
+                                    <div class="stat-label">Zone</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        async function unlockVehicle(vehicleId) {
+            if (!confirm('Sei sicuro di voler sbloccare questo mezzo? Verrà avviata una nuova corsa.')) {
+                return;
+            }
+
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sbloccando...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch(`/api/vehicles/${vehicleId}/unlock`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${app.getToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    // Show success animation
+                    button.innerHTML = '<i class="fas fa-check"></i> Sbloccato!';
+                    button.classList.remove('btn-premium');
+                    button.classList.add('btn', 'btn-success');
+                    
+                    setTimeout(() => {
+                        window.location.href = '/Trips';
+                    }, 1500);
+                } else {
+                    throw new Error('Errore durante lo sblocco');
+                }
+            } catch (error) {
+                console.error('Error unlocking vehicle:', error);
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
+                // Show error message
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-danger alert-dismissible fade show mt-2';
+                alert.innerHTML = `
+                    <i class="fas fa-exclamation-circle"></i>
+                    Errore durante lo sblocco del mezzo. Riprova.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                button.closest('.vehicle-card').appendChild(alert);
+                
+                setTimeout(() => {
+                    alert.remove();
+                }, 5000);
+            }
+        }
+
+        async function showVehicleDetails(vehicleId) {
+            const modal = new bootstrap.Modal(document.getElementById('vehicleDetailsModal'));
+            const content = document.getElementById('vehicleDetailsContent');
+            
+            content.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Caricamento...</span>
+                    </div>
+                </div>
+            `;
+            modal.show();
+
+            try {
+                // Find vehicle in local data first
+                const vehicle = vehicles.find(v => v.id === vehicleId);
+                
+                if (vehicle) {
+                    content.innerHTML = `
+                        <div class="vehicle-details-full">
+                            <div class="row mb-4">
+                                <div class="col-md-4 text-center">
+                                    <div class="vehicle-image-large">
+                                        <i class="fas fa-${vehicle.tipo === 2 ? 'motorcycle' : 'bicycle'} fa-4x text-primary"></i>
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <h4 class="mb-3">${vehicle.modello}</h4>
+                                    <div class="row">
+                                        <div class="col-6 mb-3">
+                                            <label class="text-muted small">Tipo</label>
+                                            <div class="fw-bold">${vehicle.tipo === 0 ? 'Bicicletta' : vehicle.tipo === 1 ? 'E-Bike' : 'Scooter'}</div>
+                                        </div>
+                                        <div class="col-6 mb-3">
+                                            <label class="text-muted small">Stato</label>
+                                            <div class="fw-bold">
+                                                <span class="badge ${vehicle.stato === 0 ? 'bg-success' : 'bg-warning'}">
+                                                    ${vehicle.stato === 0 ? 'Disponibile' : 'Non Disponibile'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 mb-3">
+                                            <label class="text-muted small">Elettrico</label>
+                                            <div class="fw-bold">
+                                                ${vehicle.isElettrico ? '<i class="fas fa-bolt text-success"></i> Sì' : '<i class="fas fa-times text-muted"></i> No'}
+                                            </div>
+                                        </div>
+                                        ${vehicle.isElettrico && vehicle.livelloBatteria ? `
+                                        <div class="col-6 mb-3">
+                                            <label class="text-muted small">Batteria</label>
+                                            <div class="fw-bold">${vehicle.livelloBatteria}%</div>
+                                            <div class="progress mt-1" style="height: 6px;">
+                                                <div class="progress-bar ${vehicle.livelloBatteria > 50 ? 'bg-success' : vehicle.livelloBatteria > 20 ? 'bg-warning' : 'bg-danger'}" 
+                                                     style="width: ${vehicle.livelloBatteria}%"></div>
+                                            </div>
+                                        </div>
+                                        ` : ''}
+                                        <div class="col-6 mb-3">
+                                            <label class="text-muted small">Tariffa Base</label>
+                                            <div class="fw-bold text-primary">€${vehicle.tariffaFissa}</div>
+                                        </div>
+                                        <div class="col-6 mb-3">
+                                            <label class="text-muted small">Al Minuto</label>
+                                            <div class="fw-bold text-primary">€${vehicle.tariffaPerMinuto}</div>
                                         </div>
                                     </div>
                                 </div>
-                            }
-
-                            <div class="row mb-3">
-                                <div class="col-6">
-                                    <small class="text-muted">Tariffa Base:</small>
-                                    <div class="fw-bold text-primary">€@vehicle.TariffaFissa</div>
-                                </div>
-                                <div class="col-6">
-                                    <small class="text-muted">Al minuto:</small>
-                                    <div class="fw-bold text-primary">€@vehicle.TariffaPerMinuto</div>
-                                </div>
                             </div>
-
-                            @if (vehicle.Parcheggio != null)
-                            {
-                                <div class="mb-3">
-                                    <small class="text-muted">Posizione:</small>
-                                    <div class="fw-bold">
-                                        <i class="fas fa-map-marker-alt text-danger"></i>
-                                        @vehicle.Parcheggio.Nome
-                                    </div>
-                                    <small class="text-muted">@vehicle.Parcheggio.Indirizzo</small>
-                                </div>
-                            }
+                            ${vehicle.parcheggio ? `
+                            <div class="alert alert-info">
+                                <i class="fas fa-map-marker-alt me-2"></i>
+                                <strong>Posizione:</strong> ${vehicle.parcheggio.nome}<br>
+                                <small class="text-muted">${vehicle.parcheggio.indirizzo || 'Indirizzo non disponibile'}</small>
+                            </div>
+                            ` : ''}
                         </div>
-                    </div>
-                    <div class="card-footer">
-                        @if (vehicle.Stato == VehicleStatus.Disponibile)
-                        {
-                            <button class="btn btn-primary w-100" onclick="unlockVehicle(@vehicle.Id)">
-                                <i class="fas fa-unlock"></i> Sblocca Mezzo
-                            </button>
-                        }
-                        else
-                        {
-                            <button class="btn btn-secondary w-100" disabled>
-                                <i class="fas fa-lock"></i> Non Disponibile
-                            </button>
-                        }
-                        <div class="mt-2">
-                            <button class="btn btn-outline-info btn-sm" onclick="showVehicleDetails(@vehicle.Id)">
-                                <i class="fas fa-info-circle"></i> Dettagli
-                            </button>
-                            <button class="btn btn-outline-warning btn-sm" onclick="reportMaintenance(@vehicle.Id)">
-                                <i class="fas fa-exclamation-triangle"></i> Segnala
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    `;
+                } else {
+                    content.innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei dettagli del mezzo</div>';
+                }
+            } catch (error) {
+                content.innerHTML = '<div class="alert alert-danger">Errore di connessione</div>';
+            }
         }
-    }
-    else
-    {
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body text-center py-5">
-                    <i class="fas fa-bicycle fa-3x text-muted mb-3"></i>
-                    <h4>Nessun mezzo disponibile</h4>
-                    <p class="text-muted">Non ci sono mezzi disponibili in questo momento. Riprova più tardi.</p>
-                    <button class="btn btn-primary" onclick="refreshVehicles()">
-                        <i class="fas fa-sync-alt"></i> Aggiorna Lista
-                    </button>
-                </div>
-            </div>
-        </div>
-    }
-</div>
+
+        function reportMaintenance(vehicleId) {
+            document.getElementById('maintenanceVehicleId').value = vehicleId;
+            const modal = new bootstrap.Modal(document.getElementById('maintenanceModal'));
+            modal.show();
+        }
+
+        async function submitMaintenanceReport() {
+            const vehicleId = document.getElementById('maintenanceVehicleId').value;
+            const description = document.getElementById('maintenanceDescription').value;
+
+            if (!description.trim()) {
+                alert('Inserisci una descrizione del problema');
+                return;
+            }
+
+            const submitBtn = event.target;
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Invio...';
+            submitBtn.disabled = true;
+
+            try {
+                // Simulate API call
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Show success
+                submitBtn.innerHTML = '<i class="fas fa-check"></i> Inviato!';
+                submitBtn.classList.remove('btn-premium');
+                submitBtn.classList.add('btn', 'btn-success');
+                
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('maintenanceModal')).hide();
+                    document.getElementById('maintenanceForm').reset();
+                    
+                    // Reset button
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('btn', 'btn-success');
+                    submitBtn.classList.add('btn-premium');
+                }, 1000);
+
+            } catch (error) {
+                console.error('Error reporting maintenance:', error);
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                alert('Errore nell\'invio della segnalazione');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-refresh every 2 minutes
+            setInterval(() => {
+                console.log('Auto-refreshing vehicle data...');
+                // In a real app, this would fetch new data via AJAX
+            }, 120000);
+
+            // Add scroll animations
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.vehicle-card-container').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'all 0.6s ease';
+                observer.observe(card);
+            });
+        });
+    </script>
+}
 
 <!-- Vehicle Details Modal -->
 <div class="modal fade" id="vehicleDetailsModal" tabindex="-1">

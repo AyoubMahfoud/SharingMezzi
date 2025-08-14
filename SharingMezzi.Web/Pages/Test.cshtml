@@ -1,0 +1,60 @@
+@page "/Test"
+@{
+    ViewData["Title"] = "Test API Connection";
+}
+
+<h2>Test Connessione API</h2>
+
+<div id="testResults">
+    <p>Testando connessione all'API...</p>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const resultsDiv = document.getElementById('testResults');
+        
+        try {
+            // Test basic API health
+            const response = await fetch('http://localhost:5000/api/test', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.text();
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h4>✅ API Raggiungibile!</h4>
+                        <p>Risposta: ${data}</p>
+                        <p>Status: ${response.status}</p>
+                    </div>
+                `;
+            } else {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <h4>⚠️ API Risponde ma con errori</h4>
+                        <p>Status: ${response.status}</p>
+                        <p>Status Text: ${response.statusText}</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <h4>❌ API Non Raggiungibile</h4>
+                    <p>Errore: ${error.message}</p>
+                    <p>Assicurati che l'API sia in esecuzione su <code>http://localhost:5000</code></p>
+                    <hr>
+                    <h5>Per avviare l'API:</h5>
+                    <ol>
+                        <li>Apri un terminale</li>
+                        <li>Naviga in <code>SharingMezzi.Api</code></li>
+                        <li>Esegui <code>dotnet run</code></li>
+                    </ol>
+                </div>
+            `;
+        }
+    });
+</script>

@@ -16,11 +16,8 @@ namespace SharingMezzi.Web.Services
             _configuration = configuration;
             _logger = logger;
             
-            var baseUrl = _configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5000";
+            var baseUrl = _httpClient.BaseAddress?.ToString() ?? _configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5000";
             _logger.LogInformation("ApiService configurato con BaseUrl: {BaseUrl}", baseUrl);
-            
-            // Configura il BaseAddress
-            _httpClient.BaseAddress = new Uri(baseUrl);
             
             _httpClient.DefaultRequestHeaders.Accept.Clear();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -78,15 +75,25 @@ namespace SharingMezzi.Web.Services
                 var json = JsonConvert.SerializeObject(data, new JsonSerializerSettings 
                 { 
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                    NullValueHandling = NullValueHandling.Ignore
+                    NullValueHandling = NullValueHandling.Include,
+                    DateFormatHandling = DateFormatHandling.IsoDateFormat
                 });
                 
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
-                _logger.LogDebug("POST Request: {Endpoint} - Data: {Data}", endpoint, json);
+                _logger.LogInformation("=== POST REQUEST DEBUG ===");
+                _logger.LogInformation("Endpoint: {Endpoint}", endpoint);
+                _logger.LogInformation("BaseAddress: {BaseAddress}", _httpClient.BaseAddress);
+                _logger.LogInformation("Full URL: {FullUrl}", new Uri(_httpClient.BaseAddress, endpoint));
+                _logger.LogInformation("JSON Data: {Data}", json);
+                _logger.LogInformation("Content-Type: {ContentType}", content.Headers.ContentType);
                 
                 var response = await _httpClient.PostAsync(endpoint, content);
                 var responseContent = await response.Content.ReadAsStringAsync();
+                
+                _logger.LogInformation("Response Status: {StatusCode}", response.StatusCode);
+                _logger.LogInformation("Response Content: {Content}", responseContent);
+                _logger.LogInformation("=== END POST REQUEST DEBUG ===");
                 
                 _logger.LogDebug("POST Response: {StatusCode} - Content: {Content}", 
                     response.StatusCode, responseContent);
@@ -261,7 +268,7 @@ namespace SharingMezzi.Web.Services
 
         public string GetBaseUrl()
         {
-            return _httpClient.BaseAddress?.ToString() ?? _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:5001";
+            return _httpClient.BaseAddress?.ToString() ?? _configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5000";
         }
     }
 }

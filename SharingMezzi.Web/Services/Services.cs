@@ -28,9 +28,35 @@ namespace SharingMezzi.Web.Services
 
         public async Task<List<Vehicle>> GetAvailableVehiclesAsync()
         {
+            Console.WriteLine("🔍 VehicleService.GetAvailableVehiclesAsync() chiamato");
             var token = _authService.GetToken();
-            var vehicles = await _apiService.GetAsync<List<Vehicle>>("/api/mezzi/disponibili", token);
-            return vehicles ?? new List<Vehicle>();
+            Console.WriteLine($"🔑 Token presente: {!string.IsNullOrEmpty(token)}");
+            
+            try
+            {
+                var vehicles = await _apiService.GetAsync<List<Vehicle>>("/api/mezzi/disponibili", token);
+                Console.WriteLine($"📊 API response ricevuta - mezzi disponibili: {vehicles?.Count ?? 0}");
+                
+                if (vehicles != null && vehicles.Count > 0)
+                {
+                    Console.WriteLine("🚲 Mezzi trovati:");
+                    foreach (var vehicle in vehicles)
+                    {
+                        Console.WriteLine($"   - ID: {vehicle.Id}, Modello: {vehicle.Modello}, Stato: {vehicle.Stato}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("❌ Nessun mezzo disponibile restituito dall'API");
+                }
+                
+                return vehicles ?? new List<Vehicle>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Errore in GetAvailableVehiclesAsync: {ex.Message}");
+                return new List<Vehicle>();
+            }
         }
 
         public async Task<bool> UnlockVehicleAsync(int vehicleId)

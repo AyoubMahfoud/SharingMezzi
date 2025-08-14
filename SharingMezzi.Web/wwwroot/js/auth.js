@@ -12,12 +12,6 @@ class AuthManager {
     }
 
     setupForms() {
-        // Login form
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
-            loginForm.addEventListener('submit', this.handleLogin.bind(this));
-        }
-
         // Register form
         const registerForm = document.getElementById('registerForm');
         if (registerForm) {
@@ -29,6 +23,9 @@ class AuthManager {
         if (forgotForm) {
             forgotForm.addEventListener('submit', this.handleForgotPassword.bind(this));
         }
+
+        // Note: Login form is handled by Razor Pages, not JavaScript
+        // This ensures proper server-side session management
     }
 
     setupPasswordStrength() {
@@ -98,18 +95,27 @@ class AuthManager {
                 body: JSON.stringify(loginData)
             });
 
+            if (!response.ok) {
+                console.error('Login response not ok:', response.status, response.statusText);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const result = await response.json();
+            console.log('Login result:', result);
 
             if (result.success) {
-                // Store token
+                // Store token in browser storage
                 if (formData.get('remember')) {
                     localStorage.setItem('token', result.token);
                 } else {
                     sessionStorage.setItem('token', result.token);
                 }
 
+                // Store token in session for server-side access
+                await this.setServerSession(result.token);
+
                 // Redirect to dashboard
-                window.location.href = '/';
+                window.location.href = '/Dashboard';
             } else {
                 this.showError(result.message || 'Credenziali non valide');
             }
@@ -223,12 +229,13 @@ class AuthManager {
         const isAuthPage = window.location.pathname.includes('/Login') || 
                           window.location.pathname.includes('/Register') || 
                           window.location.pathname.includes('/ForgotPassword');
+        const isHomePage = window.location.pathname === '/' || window.location.pathname === '/Index';
 
         if (token && isAuthPage) {
             // User is logged in but on auth page, redirect to dashboard
-            window.location.href = '/';
-        } else if (!token && !isAuthPage) {
-            // User is not logged in but not on auth page, redirect to login
+            window.location.href = '/Dashboard';
+        } else if (!token && !isAuthPage && !isHomePage) {
+            // User is not logged in but not on auth page (except home), redirect to login
             window.location.href = '/Login';
         }
     }
@@ -289,6 +296,21 @@ class AuthManager {
     async loginWithFacebook() {
         console.log('Facebook login not implemented yet');
         this.showInfo('Login con Facebook non ancora implementato');
+    }
+
+    // Set server session
+    async setServerSession(token) {
+        try {
+            await fetch('/Auth/SetSession', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ token: token })
+            });
+        } catch (error) {
+            console.error('Error setting server session:', error);
+        }
     }
 
     // Utility methods

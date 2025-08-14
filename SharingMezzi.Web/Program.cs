@@ -21,7 +21,7 @@ builder.Services.AddLogging(builder => {
 // Configure HttpClient for API communication
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
-    var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:5001";
+    var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5000";
     Console.WriteLine($"Configurando HttpClient con BaseUrl: {apiBaseUrl}");
     
     client.BaseAddress = new Uri(apiBaseUrl);
@@ -47,6 +47,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 // Add API Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
@@ -68,8 +79,8 @@ builder.Services.AddSession(options =>
 // Configure Kestrel to use specific ports
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenLocalhost(5050, configure => configure.UseHttps()); // HTTPS
-    options.ListenLocalhost(5051); // HTTP
+    options.ListenLocalhost(5050); // HTTP - matching API protocol
+    // Rimuoviamo HTTPS per ora per evitare mixed content issues
 });
 
 var app = builder.Build();
@@ -81,9 +92,13 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Rimuoviamo HTTPS redirect temporaneamente per debug
+// app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+
+// Add CORS
+app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -157,7 +172,7 @@ await Task.Run(async () => {
 });
 
 Console.WriteLine($"🚀 SharingMezzi.Web avviato su:");
-Console.WriteLine($"   HTTP:  http://localhost:5051");
-Console.WriteLine($"   HTTPS: https://localhost:5050");
+Console.WriteLine($"   HTTP:  http://localhost:5050");
+Console.WriteLine($"   Status: Frontend pronto per ricevere richieste");
 
 app.Run();

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SharingMezzi.Web.Services;
+using SharingMezzi.Web.Models;
 
 namespace SharingMezzi.Web.Controllers
 {
@@ -41,24 +42,42 @@ namespace SharingMezzi.Web.Controllers
         {
             try 
             {
+                Console.WriteLine($"=== FRONTEND TEST START ===");
                 Console.WriteLine($"Testing API connection to backend...");
-                var result = await _apiService.PostAsync<object>("/api/auth/login", new { 
+                Console.WriteLine($"Email: {request.Email}");
+                Console.WriteLine($"API Base URL: {_configuration["ApiSettings:BaseUrl"]}");
+                
+                var result = await _apiService.PostAsync<AuthResponse>("/api/auth/login", new { 
                     Email = request.Email, 
                     Password = request.Password 
                 });
+                
+                Console.WriteLine($"=== FRONTEND TEST RESULT ===");
+                Console.WriteLine($"Result Success: {result?.Success}");
+                Console.WriteLine($"Result Message: {result?.Message}");
+                Console.WriteLine($"Result Token: {(!string.IsNullOrEmpty(result?.Token) ? "Present" : "Missing")}");
+                Console.WriteLine($"Result User: {(result?.User != null ? result.User.Email : "Missing")}");
+                Console.WriteLine($"=== FRONTEND TEST END ===");
                 
                 return Ok(new {
                     success = true,
                     message = "Test API connection completed",
                     result = result,
+                    apiBaseUrl = _configuration["ApiSettings:BaseUrl"],
                     timestamp = DateTime.Now
                 });
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"=== FRONTEND TEST ERROR ===");
+                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine($"Stack: {ex.StackTrace}");
+                Console.WriteLine($"=== FRONTEND TEST ERROR END ===");
+                
                 return Ok(new {
                     success = false,
                     message = ex.Message,
+                    error = ex.ToString(),
                     timestamp = DateTime.Now
                 });
             }

@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SharingMezzi.Web.Models;
 using SharingMezzi.Web.Services;
+using System.Linq;
 
 namespace SharingMezzi.Web.Pages
 {
+    [IgnoreAntiforgeryToken(Order = 1001)]
     public class LoginModel : PageModel
     {
         private readonly IAuthService _authService;
@@ -23,48 +25,65 @@ namespace SharingMezzi.Web.Pages
 
         public async Task<IActionResult> OnGetAsync()
         {
-            // Check if user is already logged in
-            var token = _authService.GetToken();
-            if (!string.IsNullOrEmpty(token))
-            {
-                var user = await _authService.GetCurrentUserAsync();
-                if (user != null)
-                {
-                    return RedirectToPage("/Index");
-                }
-            }
-
+            // Skip auth check for testing
+            Console.WriteLine("Login page loaded");
             return Page();
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
+            Console.WriteLine($"=== LOGIN PAGE POST ===");
+            Console.WriteLine($"Request Method: {Request.Method}");
+            Console.WriteLine($"Content Type: {Request.ContentType}");
+            Console.WriteLine($"Form Keys: {string.Join(", ", Request.Form.Keys)}");
+            Console.WriteLine($"Email: {LoginRequest?.Email}");
+            Console.WriteLine($"Password Length: {LoginRequest?.Password?.Length ?? 0}");
+            Console.WriteLine($"ModelState Valid: {ModelState.IsValid}");
+            
             if (!ModelState.IsValid)
             {
+                Console.WriteLine("❌ ModelState errors:");
+                foreach (var error in ModelState)
+                {
+                    Console.WriteLine($"   {error.Key}: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
+                }
+            }
+            
+            // Validation
+            if (LoginRequest?.Email == null || LoginRequest?.Password == null)
+            {
+                Console.WriteLine("❌ Missing credentials");
+                ErrorMessage = "Email e password sono richiesti";
                 return Page();
             }
-
+            
             try
             {
-                var response = await _authService.LoginAsync(LoginRequest);
+                Console.WriteLine("🔄 Attempting login with AuthService...");
                 
-                if (response?.Success == true)
+                // Use the real AuthService
+                var authResponse = await _authService.LoginAsync(LoginRequest);
+                
+                if (authResponse?.Success == true)
                 {
-                    _logger.LogInformation("User {Email} logged in successfully", LoginRequest.Email);
-                    return RedirectToPage("/Index");
+                    Console.WriteLine("✅ Login successful, redirecting to Dashboard");
+                    return RedirectToPage("/Dashboard");
                 }
-                
-                ErrorMessage = response?.Message ?? "Credenziali non valide";
-                ModelState.AddModelError("", ErrorMessage);
+                else
+                {
+                    Console.WriteLine($"❌ Login failed: {authResponse?.Message}");
+                    ErrorMessage = authResponse?.Message ?? "Login fallito. Verifica le credenziali.";
+                    return Page();
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during login for user {Email}", LoginRequest.Email);
-                ErrorMessage = "Si è verificato un errore durante il login. Riprova più tardi.";
-                ModelState.AddModelError("", ErrorMessage);
+                Console.WriteLine($"❌ Exception during login: {ex.Message}");
+                Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+                _logger.LogError(ex, "Error during login");
+                ErrorMessage = "Errore durante il login. Riprova più tardi.";
+                return Page();
             }
-
-            return Page();
         }
     }
 }

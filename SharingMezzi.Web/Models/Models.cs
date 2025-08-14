@@ -190,7 +190,8 @@ namespace SharingMezzi.Web.Models
     public enum UserRole
     {
         User = 0,
-        Admin = 1
+        Admin = 1,
+        Amministratore = 1  // Alias per Admin per compatibilità con backend
     }
 
     public enum UserStatus

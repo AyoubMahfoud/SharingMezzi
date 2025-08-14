@@ -1,0 +1,275 @@
+/* Premium Dark Theme CSS for SharingMezzi */
+body {
+    background: linear-gradient(135deg, #181c24 0%, #23283b 100%);
+    color: #e4e6eb;
+    font-family: 'Poppins', 'Inter', Arial, sans-serif;
+    min-height: 100vh;
+}
+
+.page-header {
+    background: rgba(30,34,54,0.85);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    padding: 2rem 2.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+.page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(90deg,#6dd5ed,#2193b0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+}
+.page-subtitle {
+    color: #b0b3b8;
+    font-size: 1.15rem;
+}
+
+.dashboard-card, .premium-card, .quick-actions-card {
+    background: linear-gradient(135deg, #23283b 60%, #181c24 100%);
+    border-radius: 18px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+    color: #e4e6eb;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.dashboard-card:hover, .premium-card:hover, .quick-actions-card:hover {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    transform: translateY(-4px) scale(1.02);
+}
+.dashboard-card-icon, .reward-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.7rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    color: #fff;
+}
+.bg-primary { background: linear-gradient(135deg,#6dd5ed,#2193b0); color: #fff; }
+.bg-success { background: linear-gradient(135deg,#43e97b,#38f9d7); color: #fff; }
+.bg-warning { background: linear-gradient(135deg,#f7971e,#ffd200); color: #fff; }
+.bg-info { background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; }
+
+.dashboard-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #b0b3b8;
+}
+.dashboard-card-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+}
+.dashboard-card-change {
+    font-size: 0.95rem;
+    margin-top: 0.5rem;
+}
+.dashboard-card-change.positive { color: #43e97b; }
+.dashboard-card-change.negative { color: #f7971e; }
+
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(30,34,54,0.85);
+    border-radius: 14px;
+    padding: 1.2rem 0.5rem;
+    color: #e4e6eb;
+    font-weight: 600;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    transition: background 0.2s, color 0.2s, transform 0.2s;
+    text-decoration: none;
+}
+.action-btn:hover {
+    background: linear-gradient(135deg,#6dd5ed,#2193b0);
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.card-body {
+    padding: 2rem 1.5rem;
+}
+
+.timeline {
+    border-left: 2px solid #6dd5ed;
+    padding-left: 1.2rem;
+}
+.timeline-item {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+.timeline-marker {
+    position: absolute;
+    left: -32px;
+    top: 0;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg,#6dd5ed,#2193b0);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.timeline-title {
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.2rem;
+}
+.timeline-text {
+    color: #b0b3b8;
+    font-size: 0.98rem;
+}
+.timeline-time {
+    color: #43e97b;
+    font-size: 0.95rem;
+    margin-top: 0.2rem;
+}
+
+.empty-state {
+    background: rgba(30,34,54,0.85);
+    border-radius: 18px;
+    color: #b0b3b8;
+    text-align: center;
+}
+.btn-premium {
+    background: linear-gradient(135deg,#6dd5ed,#2193b0);
+    color: #fff;
+    border-radius: 12px;
+    padding: 0.7rem 1.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    transition: background 0.2s, color 0.2s;
+    text-decoration: none;
+}
+.btn-premium:hover {
+    background: linear-gradient(135deg,#43e97b,#38f9d7);
+    color: #fff;
+}
+.btn-premium-ghost {
+    background: none;
+    color: #6dd5ed;
+    border: 2px solid #6dd5ed;
+    border-radius: 12px;
+    padding: 0.5rem 1.2rem;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: background 0.2s, color 0.2s;
+    text-decoration: none;
+}
+.btn-premium-ghost:hover {
+    background: linear-gradient(135deg,#6dd5ed,#2193b0);
+    color: #fff;
+}
+
+.map-preview {
+    height: 300px;
+    background: linear-gradient(135deg, #23283b 0%, #181c24 100%);
+    border-radius: 18px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.map-placeholder {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+}
+.map-icon {
+    margin-bottom: 1rem;
+}
+.map-stats {
+    width: 100%;
+    margin-top: 1.5rem;
+}
+.stat-item {
+    padding: 0.5rem;
+}
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+}
+.stat-label {
+    font-size: 0.8rem;
+    color: #b0b3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.progress {
+    background: #23283b;
+    border-radius: 10px;
+}
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.3s;
+}
+.progress-item {
+    margin-bottom: 1rem;
+}
+
+.reward-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(30,34,54,0.85);
+    border-radius: 14px;
+    margin-bottom: 1rem;
+    transition: background 0.2s, transform 0.2s;
+}
+.reward-item:hover {
+    background: linear-gradient(135deg,#6dd5ed,#2193b0);
+    transform: translateY(-2px) scale(1.03);
+    color: #fff;
+}
+.reward-content {
+    flex: 1;
+}
+.reward-title {
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.2rem;
+}
+.reward-desc {
+    font-size: 0.95rem;
+    color: #b0b3b8;
+    margin-bottom: 0.5rem;
+}
+
+.weather-widget {
+    text-align: center;
+}
+.weather-icon {
+    margin-bottom: 1rem;
+}
+.weather-details {
+    margin-top: 1.5rem;
+}
+
+/* Premium scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    background: #23283b;
+}
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg,#6dd5ed,#2193b0);
+    border-radius: 10px;
+}

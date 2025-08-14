@@ -19,15 +19,24 @@ namespace SharingMezzi.Web.Services
         {
             try
             {
+                Console.WriteLine($"=== AUTH SERVICE LOGIN START ===");
                 Console.WriteLine($"Tentativo di login per l'utente: {request.Email}");
+                Console.WriteLine($"Password length: {request.Password?.Length ?? 0}");
+                Console.WriteLine($"ApiService BaseUrl: {_apiService.GetBaseUrl()}");
                 
-                // Aggiungiamo un log della richiesta per debug
-                Console.WriteLine($"Inviando richiesta a: {_apiService.GetBaseUrl()}/api/auth/login");
+                // Test the request object
+                var testJson = Newtonsoft.Json.JsonConvert.SerializeObject(request);
+                Console.WriteLine($"LoginRequest JSON: {testJson}");
                 
                 var response = await _apiService.PostAsync<AuthResponse>("/api/auth/login", request);
                 
-                // Log della risposta
-                Console.WriteLine($"Risposta login: Success={response?.Success}, Message={response?.Message}, HasToken={!string.IsNullOrEmpty(response?.Token)}");
+                Console.WriteLine($"=== AUTH SERVICE RESPONSE ===");
+                Console.WriteLine($"Response is null: {response == null}");
+                Console.WriteLine($"Response Success: {response?.Success}");
+                Console.WriteLine($"Response Message: {response?.Message}");
+                Console.WriteLine($"Response Token: {(!string.IsNullOrEmpty(response?.Token) ? "Present" : "Missing")}");
+                Console.WriteLine($"Response User: {(response?.User != null ? response.User.Email : "Missing")}");
+                Console.WriteLine($"=== AUTH SERVICE END ===");
                 
                 if (response?.Success == true && !string.IsNullOrEmpty(response.Token))
                 {

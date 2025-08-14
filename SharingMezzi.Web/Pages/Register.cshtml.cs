@@ -31,7 +31,7 @@ namespace SharingMezzi.Web.Pages
                 var user = await _authService.GetCurrentUserAsync();
                 if (user != null)
                 {
-                    return RedirectToPage("/Index");
+                    return RedirectToPage("/Dashboard");
                 }
             }
 

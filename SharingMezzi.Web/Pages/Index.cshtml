@@ -1,53 +1,102 @@
+
 @page
 @model SharingMezzi.Web.Pages.IndexModel
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "SharingMezzi - Benvenuto";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
 }
 
-<div class="page-header">
-    <h1 class="page-title">Dashboard</h1>
-    <p class="page-subtitle">Panoramica delle tue attività</p>
+
+<div class="hero-section premium-card animate-fade-in-up" style="margin-top: 3rem;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h1 class="page-title mb-4">
+                    <i class="fas fa-bicycle text-gradient me-3"></i>
+                    Benvenuto su SharingMezzi
+                </h1>
+                <p class="page-subtitle mb-5">
+                    Il sistema di condivisione di mezzi di trasporto più conveniente e sostenibile.<br>
+                    <span class="text-gradient">Noleggia biciclette, monopattini e molto altro con un semplice click!</span>
+                </p>
+                <div class="row mb-5">
+                    <div class="col-md-4 mb-4">
+                        <div class="feature-card premium-card h-100">
+                            <div class="feature-icon">
+                                <i class="fas fa-bicycle bg-primary"></i>
+                            </div>
+                            <h3 class="text-gradient">Mezzi Disponibili</h3>
+                            <p>Oltre <span class="fw-bold">@Model.AvailableVehicles</span> mezzi disponibili in tutta la città</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="feature-card premium-card h-100">
+                            <div class="feature-icon">
+                                <i class="fas fa-leaf bg-success"></i>
+                            </div>
+                            <h3 class="text-gradient">100% Ecologico</h3>
+                            <p>Contribuisci alla riduzione delle emissioni di CO₂</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="feature-card premium-card h-100">
+                            <div class="feature-icon">
+                                <i class="fas fa-euro-sign bg-warning"></i>
+                            </div>
+                            <h3 class="text-gradient">Conveniente</h3>
+                            <p>Tariffe competitive e piani flessibili</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="cta-buttons mt-4">
+                    <a href="/Login" class="btn-premium btn-lg me-3">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        Accedi
+                    </a>
+                    <a href="/Register" class="btn-premium-ghost btn-lg">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Registrati
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- KPI Cards -->
-<div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="dashboard-card">
-            <div class="dashboard-card-icon bg-primary text-white">
-                <i class="fas fa-bicycle"></i>
+<!-- Sezione Come Funziona -->
+<div class="how-it-works-section py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2 class="h1 fw-bold">Come Funziona</h2>
+                <p class="lead text-muted">Semplice, veloce e conveniente</p>
             </div>
-            <div class="dashboard-card-title">Mezzi Disponibili</div>
-            <div class="dashboard-card-value">@Model.AvailableVehicles</div>
-            <div class="dashboard-card-change positive">
-                <i class="fas fa-arrow-up"></i>
-                <span>+5 rispetto a ieri</span>
+        </div>
+        <div class="row">
+            <div class="col-md-4 text-center mb-4">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h4>Registrati</h4>
+                    <p>Crea il tuo account in pochi secondi</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-4">
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h4>Trova un Mezzo</h4>
+                    <p>Localizza il mezzo più vicino a te</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-4">
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h4>Inizia il Viaggio</h4>
+                    <p>Sblocca e parti per la tua destinazione</p>
+                </div>
             </div>
         </div>
     </div>
-
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="dashboard-card">
-            <div class="dashboard-card-icon bg-success text-white">
-                <i class="fas fa-route"></i>
-            </div>
-            <div class="dashboard-card-title">Corse Totali</div>
-            <div class="dashboard-card-value">@Model.TotalTrips</div>
-            <div class="dashboard-card-change positive">
-                <i class="fas fa-arrow-up"></i>
-                <span>+12% questo mese</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="dashboard-card">
-            <div class="dashboard-card-icon bg-warning text-white">
-                <i class="fas fa-wallet"></i>
-            </div>
-            <div class="dashboard-card-title">Saldo Corrente</div>
-            <div class="dashboard-card-value">€@Model.CurrentBalance</div>
-            <div class="dashboard-card-change negative">
-                <i class="fas fa-arrow-down"></i>
+</div>
                 <span>-€5.50 ultima corsa</span>
             </div>
         </div>
@@ -340,4 +389,70 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
     </style>
+
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        padding: 4rem 0;
+    }
+    
+    .feature-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        text-align: center;
+        transition: transform 0.3s ease;
+        border: none;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .cta-buttons {
+        margin-top: 2rem;
+    }
+    
+    .how-it-works-section {
+        background: white;
+    }
+    
+    .step-card {
+        padding: 2rem;
+    }
+    
+    .step-number {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0 auto 1rem;
+    }
+    
+    .step-card h4 {
+        margin-bottom: 1rem;
+        color: #333;
+    }
+    
+    .step-card p {
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+</style>
 }

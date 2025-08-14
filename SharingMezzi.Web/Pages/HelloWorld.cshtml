@@ -1,0 +1,21 @@
+@page "/HelloWorld"
+@{
+    ViewData["Title"] = "Hello World";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello World Test</title>
+</head>
+<body>
+    <h1>Hello World!</h1>
+    <p>Se vedi questo messaggio, l'applicazione web funziona correttamente.</p>
+    <p>Data e ora: @DateTime.Now</p>
+    
+    <hr>
+    <p><a href="/SimpleLogin">Vai al login semplificato</a></p>
+    <p><a href="/Login">Vai al login originale</a></p>
+    <p><a href="/Dashboard">Vai alla dashboard</a></p>
+</body>
+</html>

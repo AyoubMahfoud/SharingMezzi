@@ -32,10 +32,33 @@ namespace SharingMezzi.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Tentativo di login per: {Email}", request.Email);
+                _logger.LogInformation("=== LOGIN REQUEST RICEVUTA ===");
+                _logger.LogInformation("Request is null: {IsNull}", request == null);
+                
+                if (request == null)
+                {
+                    _logger.LogError("LoginRequest è null - problema di deserializzazione");
+                    return BadRequest(new { Success = false, Message = "Dati di login non validi" });
+                }
+                
+                _logger.LogInformation("Email ricevuta: '{Email}', Password length: {PasswordLength}", 
+                    request.Email ?? "NULL", request.Password?.Length ?? 0);
+                
+                // Verifica ModelState prima di validare i campi
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("ModelState non valido:");
+                    foreach (var error in ModelState)
+                    {
+                        _logger.LogWarning("  {Key}: {Errors}", error.Key, string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage)));
+                    }
+                    return BadRequest(new { Success = false, Message = "Dati di login non validi", Errors = ModelState });
+                }
 
                 if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
                 {
+                    _logger.LogWarning("Email o password mancanti - Email: '{Email}', Password empty: {PasswordEmpty}", 
+                        request.Email ?? "NULL", string.IsNullOrEmpty(request.Password));
                     return BadRequest(new { Success = false, Message = "Email e password sono obbligatorie" });
                 }
 

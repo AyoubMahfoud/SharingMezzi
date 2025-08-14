@@ -67,6 +67,14 @@ builder.Services.AddCors(options =>
                .AllowAnyHeader()
                .AllowCredentials();
     });
+    
+    // Policy per test diretti da file HTML
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
 });
 
 // ===== CONFIGURE PORTS =====
@@ -185,8 +193,15 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-// CORS prima dell'autenticazione
-app.UseCors("AllowFrontend");
+// CORS - Usa policy diversa per sviluppo
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("AllowAll"); // Per test e sviluppo
+}
+else
+{
+    app.UseCors("AllowFrontend"); // Per produzione
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -219,6 +234,39 @@ app.MapPost("/api/test-login", async (SharingMezziContext context) =>
         Nome = admin.Nome,
         HasPassword = !string.IsNullOrEmpty(admin.Password)
     });
+});
+
+// Endpoint di test per debug delle richieste
+app.MapPost("/api/debug-request", async (HttpContext context) =>
+{
+    var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
+    
+    return Results.Ok(new {
+        Method = context.Request.Method,
+        ContentType = context.Request.ContentType,
+        Headers = context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString()),
+        Body = body,
+        Timestamp = DateTime.UtcNow
+    });
+});
+
+// Endpoint di login semplificato per test
+app.MapPost("/api/test-simple-login", async (dynamic request) =>
+{
+    try {
+        return Results.Ok(new {
+            Success = true,
+            Message = "Test login endpoint working",
+            ReceivedData = request.ToString(),
+            Timestamp = DateTime.UtcNow
+        });
+    } catch (Exception ex) {
+        return Results.BadRequest(new {
+            Success = false,
+            Message = ex.Message,
+            Timestamp = DateTime.UtcNow
+        });
+    }
 });
 
 Console.WriteLine("🚀 SharingMezzi.Api avviato su:");
