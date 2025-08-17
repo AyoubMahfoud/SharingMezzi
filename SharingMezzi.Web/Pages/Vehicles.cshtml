@@ -1,330 +1,239 @@
 @page
 @model SharingMezzi.Web.Pages.VehiclesModel
 @using SharingMezzi.Web.Models
-@{
-    ViewData["Title"] = "Mezzi Disponibili";
-}
+    <script>
+        let vehicles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Vehicles));
+        let filteredVehicles = vehicles;
+        let mapVisible = false;
 
-<div class="animate-fade-in-up">
-    <!-- Header Section -->
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="fas fa-bicycle text-primary me-3"></i>
-            Mezzi Disponibili
-        </h1>
-        <p class="page-subtitle">Trova e prenota il mezzo perfetto per il tuo viaggio</p>
-    </div>
+        function filterVehicles() {
+            const typeFilter = document.getElementById('vehicleType').value;
+            const batteryFilter = document.getElementById('batteryLevel').value;
+            const distanceFilter = document.getElementById('maxDistance').value;
 
-    <!-- Filters Section -->
-    <div class="filter-section animate-fade-in-up" style="animation-delay: 0.1s;">
-        <div class="premium-card">
-            <div class="card-body p-4">
-                <div class="row align-items-center">
-                    <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
-                        <div class="filter-group">
-                            <label class="filter-label">
-                                <i class="fas fa-cogs me-2"></i>
-                                Tipo Mezzo
-                            </label>
-                            <select class="form-select premium-select" id="vehicleType" onchange="filterVehicles()">
-                                <option value="">Tutti i mezzi</option>
-                                <option value="0">Biciclette</option>
-                                <option value="1">E-Bike</option>
-                                <option value="2">Scooter</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
-                        <div class="filter-group">
-                            <label class="filter-label">
-                                <i class="fas fa-battery-full me-2"></i>
-                                Batteria Min.
-                            </label>
-                            <select class="form-select premium-select" id="batteryLevel" onchange="filterVehicles()">
-                                <option value="">Qualsiasi</option>
-                                <option value="80">Sopra 80%</option>
-                                <option value="50">Sopra 50%</option>
-                                <option value="20">Sopra 20%</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
-                        <div class="filter-group">
-                            <label class="filter-label">
-                                <i class="fas fa-map-marker-alt me-2"></i>
-                                Distanza Max
-                            </label>
-                            <select class="form-select premium-select" id="maxDistance" onchange="filterVehicles()">
-                                <option value="">Qualsiasi</option>
-                                <option value="500">500m</option>
-                                <option value="1000">1km</option>
-                                <option value="2000">2km</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6">
-                        <div class="filter-actions">
-                            <button class="btn-premium" onclick="refreshVehicles()">
-                                <i class="fas fa-sync-alt"></i>
-                                Aggiorna
-                            </button>
-                            <button class="btn-premium-ghost" onclick="toggleMapView()">
-                                <i class="fas fa-map"></i>
-                                Mappa
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Map View (Initially Hidden) -->
-    <div id="mapView" class="premium-card animate-fade-in-up mb-4" style="display: none; animation-delay: 0.2s;">
-        <div class="card-body p-4">
-            <div class="d-flex align-items-center justify-content-between mb-4">
-                <h5 class="mb-0">
-                    <i class="fas fa-map-marked-alt text-primary me-2"></i>
-                    Mappa Mezzi Disponibili
-                </h5>
-                <button class="btn-premium-ghost btn-sm" onclick="toggleMapView()">
-                    <i class="fas fa-times"></i>
-                    Chiudi
-                </button>
-            </div>
-            <div id="vehicleMap" class="map-container">
-                <div class="map-placeholder">
-                    <div class="map-icon">
-                        <i class="fas fa-map fa-3x text-primary mb-3"></i>
-                    </div>
-                    <h6>Mappa OpenStreetMap</h6>
-                    <p class="text-muted mb-0">Qui verranno mostrati i mezzi disponibili sulla mappa</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stats Bar -->
-    <div class="stats-bar animate-fade-in-up" style="animation-delay: 0.3s;">
-        <div class="row">
-            <div class="col-6 col-md-3 mb-3">
-                <div class="stat-item">
-                    <div class="stat-icon bg-primary">
-                        <i class="fas fa-bicycle"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value">@Model.Vehicles.Count</div>
-                        <div class="stat-label">Mezzi Totali</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 mb-3">
-                <div class="stat-item">
-                    <div class="stat-icon bg-success">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value">@Model.Vehicles.Count(v => v.Stato == VehicleStatus.Disponibile)</div>
-                        <div class="stat-label">Disponibili</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 mb-3">
-                <div class="stat-item">
-                    <div class="stat-icon bg-warning">
-                        <i class="fas fa-battery-three-quarters"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value">@Model.Vehicles.Count(v => v.LivelloBatteria >= 50)</div>
-                        <div class="stat-label">Carica 50%+</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 mb-3">
-                <div class="stat-item">
-                    <div class="stat-icon bg-info">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value">3</div>
-                        <div class="stat-label">Zone Attive</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Vehicles Grid -->
-    <div class="vehicles-grid">
-        <div class="row" id="vehiclesGrid">
-            @if (Model.Vehicles.Any())
-            {
-                @foreach (var vehicle in Model.Vehicles)
-                {
-                    <div class="col-xl-4 col-lg-6 mb-4 vehicle-card-container animate-fade-in-up" 
-                         style="animation-delay: @(0.4 + Model.Vehicles.ToList().IndexOf(vehicle) * 0.1)s;"
-                         data-type="@((int)vehicle.Tipo)" 
-                         data-battery="@(vehicle.LivelloBatteria ?? 100)">
-                        <div class="vehicle-card">
-                            <!-- Vehicle Image -->
-                            <div class="vehicle-image">
-                                @{
-                                    var icon = vehicle.Tipo switch
-                                    {
-                                        VehicleType.Bicicletta => "fas fa-bicycle",
-                                        VehicleType.EBike => "fas fa-bicycle",
-                                        VehicleType.Scooter => "fas fa-motorcycle",
-                                        _ => "fas fa-bicycle"
-                                    };
-                                }
-                                <i class="@icon vehicle-icon"></i>
-                                <div class="vehicle-badge">
-                                    <span class="badge @(vehicle.Stato == VehicleStatus.Disponibile ? "bg-success" : "bg-warning")">
-                                        @if (vehicle.Stato == VehicleStatus.Disponibile)
-                                        {
-                                            <i class="fas fa-check-circle"></i>
-                                            <text>Disponibile</text>
-                                        }
-                                        else
-                                        {
-                                            <i class="fas fa-clock"></i>
-                                            <text>@vehicle.Stato</text>
-                                        }
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Vehicle Info -->
-                            <div class="vehicle-info">
-                                <div class="vehicle-header">
-                                    <h5 class="vehicle-title">@vehicle.Modello</h5>
-                                    <div class="vehicle-id">#@vehicle.Id</div>
-                                </div>
-
-                                <div class="vehicle-details">
-                                    <div class="detail-row">
-                                        <div class="detail-item">
-                                            <i class="fas fa-cog text-primary"></i>
-                                            <span>@vehicle.Tipo</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            @if (vehicle.IsElettrico)
-                                            {
-                                                <i class="fas fa-bolt text-success"></i>
-                                                <span>Elettrico</span>
-                                            }
-                                            else
-                                            {
-                                                <i class="fas fa-muscle text-info"></i>
-                                                <span>Meccanico</span>
-                                            }
-                                        </div>
-                                    </div>
-
-                                    @if (vehicle.IsElettrico && vehicle.LivelloBatteria.HasValue)
-                                    {
-                                        <!-- Battery Status -->
-                                        <div class="battery-status">
-                                            <div class="battery-header">
-                                                <span class="battery-label">
-                                                    <i class="fas fa-battery-@(GetBatteryIcon(vehicle.LivelloBatteria.Value))"></i>
-                                                    Batteria
-                                                </span>
-                                                <span class="battery-percentage">@vehicle.LivelloBatteria%</span>
-                                            </div>
-                                            <div class="battery-bar">
-                                                <div class="battery-fill" style="width: @vehicle.LivelloBatteria%; background-color: @GetBatteryColor(vehicle.LivelloBatteria.Value);"></div>
-                                            </div>
-                                        </div>
-                                    }
-
-                                    <!-- Pricing Info -->
-                                    <div class="pricing-info">
-                                        <div class="price-item">
-                                            <i class="fas fa-play-circle text-primary"></i>
-                                            <span>€@vehicle.TariffaFissa di base</span>
-                                        </div>
-                                        <div class="price-item">
-                                            <i class="fas fa-clock text-warning"></i>
-                                            <span>€@vehicle.TariffaPerMinuto/min</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Location Info -->
-                                    @if (vehicle.Parcheggio != null)
-                                    {
-                                        <div class="location-info">
-                                            <div class="location-detail">
-                                                <i class="fas fa-map-marker-alt text-danger"></i>
-                                                <span>@vehicle.Parcheggio.Nome</span>
-                                            </div>
-                                            <div class="location-detail">
-                                                <i class="fas fa-walking text-info"></i>
-                                                <span>~@(new Random().Next(2, 15)) min a piedi</span>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-
-                                <!-- Actions -->
-                                <div class="vehicle-actions">
-                                    @if (vehicle.Stato == VehicleStatus.Disponibile)
-                                    {
-                                        <button class="btn-premium flex-fill" onclick="unlockVehicle(@vehicle.Id)">
-                                            <i class="fas fa-unlock"></i>
-                                            Sblocca
-                                        </button>
-                                        <button class="btn-premium-ghost" onclick="showVehicleDetails(@vehicle.Id)">
-                                            <i class="fas fa-info-circle"></i>
-                                            Dettagli
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-secondary flex-fill" disabled>
-                                            <i class="fas fa-ban"></i>
-                                            Non Disponibile
-                                        </button>
-                                    }
-                                </div>
-                                
-                                <div class="mt-2">
-                                    <button class="btn-premium-ghost btn-sm w-100" onclick="reportMaintenance(@vehicle.Id)">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        Segnala Problema
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            // Support both .vehicle-card and .vehicle-card-container
+            const vehicleCards = document.querySelectorAll('.vehicle-card, .vehicle-card-container');
+            vehicleCards.forEach(card => {
+                let show = true;
+                if (typeFilter && card.getAttribute('data-type') !== typeFilter) {
+                    show = false;
                 }
+                if (batteryFilter && parseInt(card.getAttribute('data-battery')) < parseInt(batteryFilter)) {
+                    show = false;
+                }
+                // Distance filter would require geolocation implementation
+                card.style.display = show ? 'block' : 'none';
+            });
+            // Add fade effect
+            vehicleCards.forEach((card, index) => {
+                if (card.style.display !== 'none') {
+                    card.style.animationDelay = `${index * 0.1}s`;
+                }
+            });
+        }
+
+        function refreshVehicles() {
+            const refreshBtn = document.querySelector('[onclick="refreshVehicles()"]');
+            if (refreshBtn) {
+                const originalText = refreshBtn.innerHTML;
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aggiornando...';
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                window.location.reload();
+            }
+        }
+
+        function toggleMapView() {
+            const mapView = document.getElementById('mapView');
+            mapVisible = !mapVisible;
+            mapView.style.display = mapVisible ? 'block' : 'none';
+            if (mapVisible) {
+                setTimeout(() => {
+                    if (mapView.classList) mapView.classList.add('animate-fade-in-up');
+                    initializeVehicleMap();
+                }, 100);
+            }
+        }
+
+        function initializeVehicleMap() {
+            const mapElement = document.getElementById('vehicleMap');
+            setTimeout(() => {
+                mapElement.innerHTML = `
+                    <div class="map-placeholder">
+                        <div class="map-icon">
+                            <i class="fas fa-map fa-3x text-primary mb-3"></i>
+                        </div>
+                        <h6>Mappa OpenStreetMap</h6>
+                        <p class="text-muted mb-4">Qui verranno mostrati i mezzi disponibili sulla mappa</p>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="map-stat">
+                                    <div class="stat-number text-primary">${vehicles.length}</div>
+                                    <div class="stat-label">Mezzi</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="map-stat">
+                                    <div class="stat-number text-success">${vehicles.filter(v => v.stato === 0).length}</div>
+                                    <div class="stat-label">Disponibili</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="map-stat">
+                                    <div class="stat-number text-warning">3</div>
+                                    <div class="stat-label">Zone</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        async function unlockVehicle(vehicleId) {
+            if (!confirm('Sei sicuro di voler sbloccare questo mezzo?')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/vehicles/${vehicleId}/unlock`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${app.getToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (response.ok) {
+                    app.showAlert('Mezzo sbloccato con successo!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/Trips';
+                    }, 2000);
+                } else {
+                    app.showAlert('Errore durante lo sblocco del mezzo', 'danger');
+                }
+            } catch (error) {
+                console.error('Error unlocking vehicle:', error);
+                app.showAlert('Errore di connessione', 'danger');
+            }
+        }
+
+        async function showVehicleDetails(vehicleId) {
+            const modal = new bootstrap.Modal(document.getElementById('vehicleDetailsModal'));
+            const content = document.getElementById('vehicleDetailsContent');
+            content.innerHTML = '<div class="text-center"><div class="spinner"></div> Caricamento...</div>';
+            modal.show();
+        }
+
+        function submitMaintenanceReport() {
+            // Implementazione invio segnalazione manutenzione
+        }
+    </script>
+            </div>
+        </div>
+    </div>
+
+@* Begin listing vehicles *@
+@foreach (var vehicle in Model.Vehicles) {
+    <div class="vehicle-card">
+        <div class="vehicle-id">#@vehicle.Id</div>
+
+        <div class="vehicle-details">
+            <div class="detail-row">
+                <div class="detail-item">
+                    <i class="fas fa-cog text-primary"></i>
+                    <span>@vehicle.Tipo</span>
+                </div>
+                <div class="detail-item">
+                    @if (vehicle.IsElettrico)
+                    {
+                        <i class="fas fa-bolt text-success"></i>
+                        <span>Elettrico</span>
+                    }
+                    else
+                    {
+                        <i class="fas fa-muscle text-info"></i>
+                        <span>Meccanico</span>
+                    }
+                </div>
+            </div>
+
+            @if (vehicle.IsElettrico && vehicle.LivelloBatteria.HasValue)
+            {
+                <!-- Battery Status -->
+                <div class="battery-status">
+                    <div class="battery-header">
+                        <span class="battery-label">
+                            <i class="fas fa-battery-@(GetBatteryIcon(vehicle.LivelloBatteria.Value))"></i>
+                            Batteria
+                        </span>
+                        <span class="battery-percentage">@vehicle.LivelloBatteria%</span>
+                    </div>
+                    <div class="battery-bar">
+                        <div class="battery-fill" style="width: @vehicle.LivelloBatteria%; background-color: @GetBatteryColor(vehicle.LivelloBatteria.Value);"></div>
+                    </div>
+                </div>
+            }
+
+            <!-- Pricing Info -->
+            <div class="pricing-info">
+                <div class="price-item">
+                    <i class="fas fa-play-circle text-primary"></i>
+                    <span>€@vehicle.TariffaFissa di base</span>
+                </div>
+                <div class="price-item">
+                    <i class="fas fa-clock text-warning"></i>
+                    <span>€@vehicle.TariffaPerMinuto/min</span>
+                </div>
+            </div>
+
+            <!-- Location Info -->
+            @if (vehicle.Parcheggio != null)
+            {
+                <div class="location-info">
+                    <div class="location-detail">
+                        <i class="fas fa-map-marker-alt text-danger"></i>
+                        <span>@vehicle.Parcheggio.Nome</span>
+                    </div>
+                    <div class="location-detail">
+                        <i class="fas fa-walking text-info"></i>
+                        <span>~@(new Random().Next(2, 15)) min a piedi</span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Actions -->
+        <div class="vehicle-actions">
+            @if (vehicle.Stato == VehicleStatus.Disponibile)
+            {
+                <button class="btn-premium flex-fill" onclick="unlockVehicle(@vehicle.Id)">
+                    <i class="fas fa-unlock"></i>
+                    Sblocca
+                </button>
+                <button class="btn-premium-ghost" onclick="showVehicleDetails(@vehicle.Id)">
+                    <i class="fas fa-info-circle"></i>
+                    Dettagli
+                </button>
             }
             else
             {
-                <div class="col-12">
-                    <div class="empty-state animate-fade-in-up">
-                        <div class="premium-card">
-                            <div class="card-body text-center py-5">
-                                <div class="empty-icon mb-4">
-                                    <i class="fas fa-bicycle fa-4x text-muted"></i>
-                                </div>
-                                <h4 class="mb-3">Nessun mezzo disponibile</h4>
-                                <p class="text-muted mb-4">
-                                    Non ci sono mezzi disponibili in questo momento.<br>
-                                    Riprova più tardi.
-                                </p>
-                                <button class="btn-premium" onclick="refreshVehicles()">
-                                    <i class="fas fa-sync-alt"></i>
-                                    Aggiorna Lista
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <button class="btn btn-secondary flex-fill" disabled>
+                    <i class="fas fa-ban"></i>
+                    Non Disponibile
+                </button>
             }
         </div>
+        
+        <div class="mt-2">
+            <button class="btn-premium-ghost btn-sm w-100" onclick="reportMaintenance(@vehicle.Id)">
+                <i class="fas fa-exclamation-triangle"></i>
+                Segnala Problema
+            </button>
+        </div>
     </div>
-</div>
+}
+@* End listing vehicles *@
 
 @functions {
     private string GetBatteryIcon(int percentage)
@@ -1085,177 +994,3 @@
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        let vehicles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Vehicles));
-        let filteredVehicles = vehicles;
-        let mapVisible = false;
-
-        function filterVehicles() {
-            const typeFilter = document.getElementById('vehicleType').value;
-            const batteryFilter = document.getElementById('batteryLevel').value;
-            const distanceFilter = document.getElementById('maxDistance').value;
-
-            const vehicleCards = document.querySelectorAll('.vehicle-card');
-            
-            vehicleCards.forEach(card => {
-                let show = true;
-                
-                if (typeFilter && card.getAttribute('data-type') !== typeFilter) {
-                    show = false;
-                }
-                
-                if (batteryFilter && parseInt(card.getAttribute('data-battery')) < parseInt(batteryFilter)) {
-                    show = false;
-                }
-                
-                // Distance filter would require geolocation implementation
-                
-                card.style.display = show ? 'block' : 'none';
-            });
-        }
-
-        function refreshVehicles() {
-            window.location.reload();
-        }
-
-        function toggleMapView() {
-            const mapView = document.getElementById('mapView');
-            mapVisible = !mapVisible;
-            mapView.style.display = mapVisible ? 'block' : 'none';
-            
-            if (mapVisible) {
-                initializeVehicleMap();
-            }
-        }
-
-        function initializeVehicleMap() {
-            // Initialize OpenStreetMap with vehicle locations
-            const mapElement = document.getElementById('vehicleMap');
-            setTimeout(() => {
-                mapElement.innerHTML = `
-                    <div class="text-center">
-                        <i class="fas fa-map fa-3x text-primary mb-3"></i>
-                        <p class="text-primary">Mappa OpenStreetMap</p>
-                        <small class="text-muted">Qui verranno mostrati i mezzi disponibili sulla mappa</small>
-                    </div>
-                `;
-            }, 1000);
-        }
-
-        async function unlockVehicle(vehicleId) {
-            if (!confirm('Sei sicuro di voler sbloccare questo mezzo?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/vehicles/${vehicleId}/unlock`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${app.getToken()}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    app.showAlert('Mezzo sbloccato con successo!', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/Trips';
-                    }, 2000);
-                } else {
-                    app.showAlert('Errore durante lo sblocco del mezzo', 'danger');
-                }
-            } catch (error) {
-                console.error('Error unlocking vehicle:', error);
-                app.showAlert('Errore di connessione', 'danger');
-            }
-        }
-
-        async function showVehicleDetails(vehicleId) {
-            const modal = new bootstrap.Modal(document.getElementById('vehicleDetailsModal'));
-            const content = document.getElementById('vehicleDetailsContent');
-            
-            content.innerHTML = '<div class="text-center"><div class="spinner"></div> Caricamento...</div>';
-            modal.show();
-
-            try {
-                const response = await fetch(`/api/vehicles/${vehicleId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${app.getToken()}`
-                    }
-                });
-
-                if (response.ok) {
-                    const vehicle = await response.json();
-                    content.innerHTML = `
-                        <div class="vehicle-details-full">
-                            <h5>${vehicle.modello}</h5>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>Tipo:</strong> ${vehicle.tipo}</p>
-                                    <p><strong>Stato:</strong> ${vehicle.stato}</p>
-                                    <p><strong>Elettrico:</strong> ${vehicle.isElettrico ? 'Sì' : 'No'}</p>
-                                    ${vehicle.isElettrico ? `<p><strong>Batteria:</strong> ${vehicle.livelloBatteria}%</p>` : ''}
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Tariffa base:</strong> €${vehicle.tariffaFissa}</p>
-                                    <p><strong>Al minuto:</strong> €${vehicle.tariffaPerMinuto}</p>
-                                    ${vehicle.ultimaManutenzione ? `<p><strong>Ultima manutenzione:</strong> ${new Date(vehicle.ultimaManutenzione).toLocaleDateString()}</p>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    content.innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei dettagli</div>';
-                }
-            } catch (error) {
-                content.innerHTML = '<div class="alert alert-danger">Errore di connessione</div>';
-            }
-        }
-
-        function reportMaintenance(vehicleId) {
-            document.getElementById('maintenanceVehicleId').value = vehicleId;
-            const modal = new bootstrap.Modal(document.getElementById('maintenanceModal'));
-            modal.show();
-        }
-
-        async function submitMaintenanceReport() {
-            const vehicleId = document.getElementById('maintenanceVehicleId').value;
-            const description = document.getElementById('maintenanceDescription').value;
-
-            if (!description.trim()) {
-                app.showAlert('Inserisci una descrizione del problema', 'warning');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/vehicles/${vehicleId}/maintenance`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${app.getToken()}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ description })
-                });
-
-                if (response.ok) {
-                    app.showAlert('Segnalazione inviata con successo', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('maintenanceModal')).hide();
-                    document.getElementById('maintenanceForm').reset();
-                } else {
-                    app.showAlert('Errore nell\'invio della segnalazione', 'danger');
-                }
-            } catch (error) {
-                console.error('Error reporting maintenance:', error);
-                app.showAlert('Errore di connessione', 'danger');
-            }
-        }
-
-        // Initialize filters on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Auto-refresh every 2 minutes
-            setInterval(refreshVehicles, 120000);
-        });
-    </script>
-}
