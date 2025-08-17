@@ -3,7 +3,7 @@ using SharingMezzi.Web.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== CONFIGURAZIONE SOLO HTTP =====
-builder.WebHost.UseUrls("http://localhost:5050");
+builder.WebHost.UseUrls("http://0.0.0.0:5050");
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -39,7 +39,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBackend", policy =>
     {
-        policy.WithOrigins("http://localhost:5000")
+        policy.WithOrigins(
+                "http://localhost:5000",
+                "http://0.0.0.0:5000",
+                "http://*:5000"  // Allow any IP on port 5000
+              )
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
