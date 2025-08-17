@@ -80,8 +80,8 @@ builder.Services.AddCors(options =>
 // ===== CONFIGURE PORTS =====
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenLocalhost(5001, configure => configure.UseHttps()); // HTTPS
-    options.ListenLocalhost(5000); // HTTP
+    options.ListenAnyIP(5001, configure => configure.UseHttps()); // HTTPS - All interfaces
+    options.ListenAnyIP(5000); // HTTP - All interfaces
 });
 
 var app = builder.Build();
