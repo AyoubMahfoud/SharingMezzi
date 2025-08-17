@@ -2,6 +2,22 @@ using SharingMezzi.Web.Models;
 
 namespace SharingMezzi.Web.Services
 {
+    // ===== AUTH SERVICE INTERFACE =====
+    public interface IAuthService
+    {
+        Task<AuthResponse?> LoginAsync(LoginRequest request);
+        Task<bool> RegisterAsync(RegisterRequest request);
+        void LogoutAsync();
+        string? GetToken();
+        User? GetCurrentUser();
+        Task<User?> GetCurrentUserAsync(); // METODO AGGIUNTO
+        bool IsAuthenticated();
+        void SetToken(string token);
+        void SetCurrentUser(User user);
+        void ClearSession();
+    }
+
+    // ===== API SERVICE INTERFACE =====
     public interface IApiService
     {
         Task<T?> GetAsync<T>(string endpoint, string? token = null);
@@ -11,34 +27,30 @@ namespace SharingMezzi.Web.Services
         string GetBaseUrl();
     }
 
-    public interface IAuthService
-    {
-        Task<AuthResponse?> LoginAsync(LoginRequest request);
-        Task<bool> RegisterAsync(RegisterRequest request);
-        Task<bool> LogoutAsync();
-        Task<User?> GetCurrentUserAsync();
-        string? GetToken();
-        void SetToken(string token);
-        void ClearToken();
-    }
-
+    // ===== VEHICLE SERVICE INTERFACE =====
     public interface IVehicleService
     {
         Task<List<Vehicle>> GetVehiclesAsync();
+        Task<List<Vehicle>> GetAllVehiclesAsync();
         Task<Vehicle?> GetVehicleAsync(int id);
+        Task<Vehicle?> GetVehicleByIdAsync(int id);
         Task<List<Vehicle>> GetAvailableVehiclesAsync();
         Task<bool> UnlockVehicleAsync(int vehicleId);
         Task<bool> ReportMaintenanceAsync(int vehicleId, string description);
     }
 
+    // ===== PARKING SERVICE INTERFACE =====
     public interface IParkingService
     {
         Task<List<Parking>> GetParkingsAsync();
+        Task<List<Parking>> GetAllParkingsAsync();
         Task<Parking?> GetParkingAsync(int id);
+        Task<Parking?> GetParkingByIdAsync(int id);
         Task<List<Slot>> GetParkingSlotsAsync(int parkingId);
         Task<bool> ReserveParkingSlotAsync(int slotId);
     }
 
+    // ===== USER SERVICE INTERFACE =====
     public interface IUserService
     {
         Task<List<User>> GetUsersAsync();
@@ -53,6 +65,16 @@ namespace SharingMezzi.Web.Services
         Task<UserStatistics?> GetUserStatisticsAsync(int userId);
     }
 
+    // ===== TRIP SERVICE INTERFACE =====
+    public interface ITripService
+    {
+        Task<List<Trip>> GetTripsAsync();
+        Task<List<Trip>> GetUserTripsAsync();
+        Task<Trip?> GetTripByIdAsync(int id);
+        Task<bool> EndTripAsync(int tripId, int destinationParkingId);
+    }
+
+    // ===== BILLING SERVICE INTERFACE =====
     public interface IBillingService
     {
         Task<List<Recharge>> GetRechargesAsync();
@@ -61,5 +83,8 @@ namespace SharingMezzi.Web.Services
         Task<List<Trip>> GetTripsAsync();
         Task<List<Trip>> GetUserTripsAsync(int userId);
         Task<decimal> GetUserBalanceAsync(int userId);
+        Task<decimal> GetUserCreditAsync();
+        Task<bool> RechargeAsync(decimal amount, string paymentMethod);
+        Task<List<dynamic>?> GetTransactionsAsync();
     }
 }

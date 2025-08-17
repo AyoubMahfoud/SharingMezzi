@@ -1,5 +1,15 @@
 namespace SharingMezzi.Core.Entities
+{   
+
+namespace SharingMezzi.Core.Entities
 {
+    public enum StatoSlot
+    {
+        Libero = 0,
+        Occupato = 1,
+        FuoriServizio = 2
+    }
+}
     public enum StatoSlot { Libero, Occupato, Manutenzione }
     
     public class Slot : BaseEntity

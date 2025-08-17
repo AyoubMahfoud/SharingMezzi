@@ -73,7 +73,8 @@ namespace SharingMezzi.Web.Pages
                 await Task.WhenAll(tasks);
 
                 // Calcola statistiche derivate
-                CalculateDerivedStats();
+                //CalculateDerivedStats();
+                
 
                 // Verifica se i dati sono stati caricati
                 if (AvailableVehicles > 0 || ActiveStations > 0 || CompletedTrips > 0)
@@ -227,48 +228,31 @@ namespace SharingMezzi.Web.Pages
         {
             try
             {
-                _logger.LogInformation("📊 Tentativo caricamento system status...");
-                DebugMessages.Add("Tentando system status...");
+                _logger.LogInformation("📊 Tentativo caricamento statistiche pubbliche...");
+                DebugMessages.Add("Tentando statistiche pubbliche...");
 
-                // Questo endpoint richiede auth admin, quindi probabilmente fallirà
-                var systemStatus = await _apiService.GetAsync<dynamic>("/api/admin/system-status");
-                
-                if (systemStatus != null)
+                // USA IL NUOVO ENDPOINT PUBBLICO
+                var stats = await _apiService.GetAsync<dynamic>("/api/public/stats");
+
+                if (stats != null)
                 {
-                    // Estrai dati se disponibili
-                    AvailableVehicles = systemStatus.mezziDisponibili ?? AvailableVehicles;
-                    ActiveStations = systemStatus.totaleParcheggi ?? ActiveStations;
-                    ActiveUsers = systemStatus.corsaAttive ?? 0; // Corse attive come proxy utenti attivi
-                    
-                    DebugMessages.Add($"✅ System status: V:{AvailableVehicles}, S:{ActiveStations}, U:{ActiveUsers}");
+                    // Aggiorna le statistiche con i dati reali
+                    AvailableVehicles = stats.mezziDisponibili ?? AvailableVehicles;
+                    ActiveStations = stats.totaleParcheggi ?? ActiveStations;
+                    ActiveUsers = stats.totaleUtenti ?? ActiveUsers;
+
+                    _logger.LogInformation("✅ Statistiche pubbliche caricate con successo");
+                    DebugMessages.Add("✅ Statistiche pubbliche caricate");
                     return;
                 }
 
-                DebugMessages.Add("❌ System status non accessibile");
+                DebugMessages.Add("❌ Endpoint statistiche non funziona");
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "System status non disponibile (normale senza auth admin)");
-                DebugMessages.Add($"ℹ️ System status richiede auth admin - {ex.Message}");
+                _logger.LogWarning(ex, "Errore nel caricamento statistiche pubbliche");
+                DebugMessages.Add($"❌ Errore statistiche: {ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// Calcola statistiche derivate
-        /// </summary>
-        private void CalculateDerivedStats()
-        {
-            // CO2 risparmiata: 1km in bici vs auto = ~0.12kg CO2 risparmiata
-            Co2Saved = Math.Round(KilometersToday * 0.12m, 2);
-            
-            // Se non abbiamo utenti attivi, stimiamo dal numero di viaggi
-            if (ActiveUsers == 0 && CompletedTrips > 0)
-            {
-                // Stima: ~20% degli utenti totali sono attivi
-                ActiveUsers = Math.Max(1, CompletedTrips / 5);
-            }
-            
-            DebugMessages.Add($"✅ Statistiche derivate: CO2={Co2Saved}kg, Utenti stimati={ActiveUsers}");
         }
 
         /// <summary>
@@ -277,14 +261,14 @@ namespace SharingMezzi.Web.Pages
         private void LoadFallbackData()
         {
             _logger.LogWarning("🔄 Caricamento dati di fallback");
-            
+
             AvailableVehicles = 125;
             ActiveUsers = 15000;
             ActiveStations = 50;
             Co2Saved = 2500;
             KilometersToday = 8750;
             CompletedTrips = 45000;
-            
+
             IsDataLoaded = false; // Indica che sono dati demo
             DebugMessages.Add("🔄 Dati di fallback caricati");
         }

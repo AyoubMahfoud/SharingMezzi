@@ -34,7 +34,8 @@ namespace SharingMezzi.Web.Services
             
             try
             {
-                var vehicles = await _apiService.GetAsync<List<Vehicle>>("/api/mezzi/disponibili", token);
+                // Prima prova con endpoint pubblico
+                var vehicles = await _apiService.GetAsync<List<Vehicle>>("/api/public/mezzi/disponibili");
                 Console.WriteLine($"📊 API response ricevuta - mezzi disponibili: {vehicles?.Count ?? 0}");
                 
                 if (vehicles != null && vehicles.Count > 0)
@@ -44,13 +45,21 @@ namespace SharingMezzi.Web.Services
                     {
                         Console.WriteLine($"   - ID: {vehicle.Id}, Modello: {vehicle.Modello}, Stato: {vehicle.Stato}");
                     }
-                }
-                else
-                {
-                    Console.WriteLine("❌ Nessun mezzo disponibile restituito dall'API");
+                    return vehicles;
                 }
                 
-                return vehicles ?? new List<Vehicle>();
+                // Se l'endpoint pubblico non funziona, prova con quello autenticato
+                Console.WriteLine("🔄 Tentativo con endpoint autenticato...");
+                vehicles = await _apiService.GetAsync<List<Vehicle>>("/api/mezzi/disponibili", token);
+                
+                if (vehicles != null && vehicles.Count > 0)
+                {
+                    Console.WriteLine($"✅ Mezzi caricati da endpoint autenticato: {vehicles.Count}");
+                    return vehicles;
+                }
+                
+                Console.WriteLine("❌ Nessun mezzo disponibile restituito dall'API");
+                return new List<Vehicle>();
             }
             catch (Exception ex)
             {
@@ -73,6 +82,17 @@ namespace SharingMezzi.Web.Services
             var response = await _apiService.PostAsync<object>("/api/segnalazioni", request, token);
             return response != null;
         }
+
+        // ===== METODI ALIAS PER COMPATIBILITÀ =====
+        public async Task<List<Vehicle>> GetAllVehiclesAsync()
+        {
+            return await GetVehiclesAsync();
+        }
+
+        public async Task<Vehicle?> GetVehicleByIdAsync(int id)
+        {
+            return await GetVehicleAsync(id);
+        }
     }
 
     public class ParkingService : IParkingService
@@ -88,9 +108,25 @@ namespace SharingMezzi.Web.Services
 
         public async Task<List<Parking>> GetParkingsAsync()
         {
-            var token = _authService.GetToken();
-            var parkings = await _apiService.GetAsync<List<Parking>>("/api/parcheggi", token);
-            return parkings ?? new List<Parking>();
+            try
+            {
+                // Prima prova con endpoint pubblico
+                var parkings = await _apiService.GetAsync<List<Parking>>("/api/public/parcheggi");
+                if (parkings != null && parkings.Count > 0)
+                {
+                    return parkings;
+                }
+
+                // Se l'endpoint pubblico non funziona, prova con quello autenticato
+                var token = _authService.GetToken();
+                parkings = await _apiService.GetAsync<List<Parking>>("/api/parcheggi", token);
+                return parkings ?? new List<Parking>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Errore nel caricamento parcheggi: {ex.Message}");
+                return new List<Parking>();
+            }
         }
 
         public async Task<Parking?> GetParkingAsync(int id)
@@ -111,6 +147,17 @@ namespace SharingMezzi.Web.Services
             var token = _authService.GetToken();
             var response = await _apiService.PostAsync<object>($"/api/slots/{slotId}/prenota", new { }, token);
             return response != null;
+        }
+
+        // ===== METODI ALIAS PER COMPATIBILITÀ =====
+        public async Task<List<Parking>> GetAllParkingsAsync()
+        {
+            return await GetParkingsAsync();
+        }
+
+        public async Task<Parking?> GetParkingByIdAsync(int id)
+        {
+            return await GetParkingAsync(id);
         }
     }
 
@@ -250,6 +297,108 @@ namespace SharingMezzi.Web.Services
             var token = _authService.GetToken();
             var response = await _apiService.GetAsync<decimal>($"/api/utenti/{userId}/saldo", token);
             return response;
+        }
+
+        // ===== METODI AGGIUNTIVI PER COMPATIBILITÀ =====
+        public async Task<decimal> GetUserCreditAsync()
+        {
+            try
+            {
+                var token = _authService.GetToken();
+                var profile = await _apiService.GetAsync<User>("/api/user/profile", token);
+                return profile?.Credito ?? 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Errore nel recupero credito: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public async Task<bool> RechargeAsync(decimal amount, string paymentMethod)
+        {
+            try
+            {
+                // CORRETTO: Converti string in PaymentMethod enum
+                PaymentMethod paymentMethodEnum;
+                if (!Enum.TryParse<PaymentMethod>(paymentMethod, out paymentMethodEnum))
+                {
+                    // Default fallback
+                    paymentMethodEnum = PaymentMethod.CartaCredito;
+                }
+
+                var request = new RechargeRequest 
+                { 
+                    Importo = amount, 
+                    MetodoPagamento = paymentMethodEnum  // Ora è del tipo corretto
+                };
+                return await CreateRechargeAsync(request);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Errore nella ricarica: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<List<dynamic>?> GetTransactionsAsync()
+        {
+            try
+            {
+                var token = _authService.GetToken();
+                return await _apiService.GetAsync<List<dynamic>>("/api/user/transazioni", token);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Errore nel recupero transazioni: {ex.Message}");
+                return null;
+            }
+        }
+    }
+
+    public class TripService : ITripService
+    {
+        private readonly IApiService _apiService;
+        private readonly IAuthService _authService;
+
+        public TripService(IApiService apiService, IAuthService authService)
+        {
+            _apiService = apiService;
+            _authService = authService;
+        }
+
+        public async Task<List<Trip>> GetTripsAsync()
+        {
+            var token = _authService.GetToken();
+            var trips = await _apiService.GetAsync<List<Trip>>("/api/corse/storico", token);
+            return trips ?? new List<Trip>();
+        }
+
+        public async Task<List<Trip>> GetUserTripsAsync()
+        {
+            return await GetTripsAsync();
+        }
+
+        public async Task<Trip?> GetTripByIdAsync(int id)
+        {
+            var token = _authService.GetToken();
+            return await _apiService.GetAsync<Trip>($"/api/corse/{id}", token);
+        }
+
+        public async Task<bool> EndTripAsync(int tripId, int destinationParkingId)
+        {
+            try
+            {
+                var token = _authService.GetToken();
+                var result = await _apiService.PutAsync<dynamic>($"/api/corse/{tripId}/termina", 
+                    new { ParcheggioDestinazioneId = destinationParkingId }, token);
+                return result != null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Errore nella terminazione corsa: {ex.Message}");
+                return false;
+            }
         }
     }
 }

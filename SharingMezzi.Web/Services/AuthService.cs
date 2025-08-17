@@ -107,104 +107,181 @@ namespace SharingMezzi.Web.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Eccezione durante la registrazione: {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                }
                 return false;
             }
         }
 
-        public async Task<bool> LogoutAsync()
+        public void LogoutAsync()
         {
             try
             {
-                var token = GetToken();
-                if (!string.IsNullOrEmpty(token))
-                {
-                    await _apiService.PostAsync<object>("/api/auth/logout", new { }, token);
-                }
-                
-                ClearToken();
-                ClearCurrentUser();
-                return true;
+                Console.WriteLine("Esecuzione logout...");
+                ClearSession();
+                Console.WriteLine("Logout completato con successo");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Logout Error: {ex.Message}");
-                ClearToken();
-                ClearCurrentUser();
-                return false;
-            }
-        }
-
-        public async Task<User?> GetCurrentUserAsync()
-        {
-            try
-            {
-                var user = GetCurrentUserFromSession();
-                if (user != null)
-                    return user;
-
-                var token = GetToken();
-                if (string.IsNullOrEmpty(token))
-                    return null;
-
-                var response = await _apiService.GetAsync<User>("/api/auth/profile", token);
-                if (response != null)
-                {
-                    SetCurrentUser(response);
-                }
-                
-                return response;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Get Current User Error: {ex.Message}");
-                return null;
+                Console.WriteLine($"Errore durante il logout: {ex.Message}");
             }
         }
 
         public string? GetToken()
         {
-            return _httpContextAccessor.HttpContext?.Session.GetString(TokenKey);
+            try
+            {
+                var session = _httpContextAccessor.HttpContext?.Session;
+                if (session != null)
+                {
+                    var token = session.GetString(TokenKey);
+                    Console.WriteLine($"Token recuperato dalla sessione: {(!string.IsNullOrEmpty(token) ? "Present" : "Missing")}");
+                    return token;
+                }
+                
+                Console.WriteLine("Sessione non disponibile per recuperare il token");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Errore nel recupero del token: {ex.Message}");
+                return null;
+            }
+        }
+
+        public User? GetCurrentUser()
+        {
+            try
+            {
+                var session = _httpContextAccessor.HttpContext?.Session;
+                if (session != null)
+                {
+                    var userJson = session.GetString(UserKey);
+                    if (!string.IsNullOrEmpty(userJson))
+                    {
+                        var user = Newtonsoft.Json.JsonConvert.DeserializeObject<User>(userJson);
+                        Console.WriteLine($"Utente recuperato dalla sessione: {user?.Email ?? "Unknown"}");
+                        return user;
+                    }
+                }
+                
+                Console.WriteLine("Nessun utente trovato nella sessione");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Errore nel recupero dell'utente: {ex.Message}");
+                return null;
+            }
+        }
+
+        // ===== METODO ASYNC AGGIUNTO =====
+        public async Task<User?> GetCurrentUserAsync()
+        {
+            try
+            {
+                // Prima prova dalla sessione
+                var userFromSession = GetCurrentUser();
+                if (userFromSession != null)
+                {
+                    return userFromSession;
+                }
+
+                // Se non c'è nella sessione, prova dall'API
+                var token = GetToken();
+                if (!string.IsNullOrEmpty(token))
+                {
+                    Console.WriteLine("Tentativo di recupero utente dall'API...");
+                    var userFromApi = await _apiService.GetAsync<User>("/api/user/profile", token);
+                    
+                    if (userFromApi != null)
+                    {
+                        // Salva nella sessione per le prossime volte
+                        SetCurrentUser(userFromApi);
+                        Console.WriteLine($"Utente recuperato dall'API e salvato in sessione: {userFromApi.Email}");
+                        return userFromApi;
+                    }
+                }
+
+                Console.WriteLine("Impossibile recuperare l'utente corrente");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Errore nel recupero async dell'utente: {ex.Message}");
+                return null;
+            }
+        }
+
+        public bool IsAuthenticated()
+        {
+            var token = GetToken();
+            var isAuth = !string.IsNullOrEmpty(token);
+            Console.WriteLine($"Stato autenticazione: {isAuth}");
+            return isAuth;
         }
 
         public void SetToken(string token)
         {
-            _httpContextAccessor.HttpContext?.Session.SetString(TokenKey, token);
-        }
-
-        public void ClearToken()
-        {
-            _httpContextAccessor.HttpContext?.Session.Remove(TokenKey);
-        }
-
-        private User? GetCurrentUserFromSession()
-        {
-            var userJson = _httpContextAccessor.HttpContext?.Session.GetString(UserKey);
-            if (string.IsNullOrEmpty(userJson))
-                return null;
-
             try
             {
-                return System.Text.Json.JsonSerializer.Deserialize<User>(userJson);
+                var session = _httpContextAccessor.HttpContext?.Session;
+                if (session != null)
+                {
+                    session.SetString(TokenKey, token);
+                    Console.WriteLine("Token salvato nella sessione");
+                }
+                else
+                {
+                    Console.WriteLine("Impossibile salvare il token: sessione non disponibile");
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                return null;
+                Console.WriteLine($"Errore nel salvataggio del token: {ex.Message}");
             }
         }
 
-        private void SetCurrentUser(User user)
+        public void SetCurrentUser(User user)
         {
-            var userJson = System.Text.Json.JsonSerializer.Serialize(user);
-            _httpContextAccessor.HttpContext?.Session.SetString(UserKey, userJson);
+            try
+            {
+                var session = _httpContextAccessor.HttpContext?.Session;
+                if (session != null)
+                {
+                    var userJson = Newtonsoft.Json.JsonConvert.SerializeObject(user);
+                    session.SetString(UserKey, userJson);
+                    Console.WriteLine($"Utente salvato nella sessione: {user.Email}");
+                }
+                else
+                {
+                    Console.WriteLine("Impossibile salvare l'utente: sessione non disponibile");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Errore nel salvataggio dell'utente: {ex.Message}");
+            }
         }
 
-        private void ClearCurrentUser()
+        public void ClearSession()
         {
-            _httpContextAccessor.HttpContext?.Session.Remove(UserKey);
+            try
+            {
+                var session = _httpContextAccessor.HttpContext?.Session;
+                if (session != null)
+                {
+                    session.Remove(TokenKey);
+                    session.Remove(UserKey);
+                    Console.WriteLine("Sessione pulita con successo");
+                }
+                else
+                {
+                    Console.WriteLine("Sessione non disponibile per la pulizia");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Errore nella pulizia della sessione: {ex.Message}");
+            }
         }
     }
 }
