@@ -1,21 +1,20 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 
 namespace SharingMezzi.Web.Pages
 {
-    [Authorize]
     public class MapModel : PageModel
     {
-        private readonly ILogger<MapModel> _logger;
+        private readonly ILogger<MapModel>? _logger;
 
-        public MapModel(ILogger<MapModel> logger)
+        public MapModel(ILogger<MapModel>? logger = null)
         {
             _logger = logger;
         }
 
         public void OnGet()
         {
-            _logger.LogInformation("Loading map page");
+            _logger?.LogInformation("Map page loaded");
         }
     }
 }

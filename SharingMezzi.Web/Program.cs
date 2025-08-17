@@ -25,9 +25,11 @@ builder.Services.AddScoped<IBillingService, BillingService>();
 builder.Services.AddAuthentication("Cookies")
     .AddCookie("Cookies", options =>
     {
-        options.LoginPath = "/Auth/Login";
-        options.LogoutPath = "/Auth/Logout";
-        options.AccessDeniedPath = "/Auth/AccessDenied";
+        // Use the web app's Razor Pages for auth UI. Login page is at /Login.
+        options.LoginPath = "/Login";
+        // Logout/AccessDenied pages can be added later; keep sensible defaults.
+        options.LogoutPath = "/Logout";
+        options.AccessDeniedPath = "/AccessDenied";
         options.ExpireTimeSpan = TimeSpan.FromHours(1);
         options.SlidingExpiration = true;
     });

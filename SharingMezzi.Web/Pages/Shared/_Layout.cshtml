@@ -110,6 +110,34 @@
                             <span>Profilo</span>
                         </a>
                     }
+
+                    @if (User.Identity?.IsAuthenticated == true && (User.IsInRole("Amministratore") || User.IsInRole("Admin")))
+                    {
+                        <div class="nav-section mt-4 mb-2">
+                            <small class="text-muted text-uppercase fw-semibold">Amministrazione</small>
+                        </div>
+
+                        <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark admin-only" href="/Admin/Reports">
+                            <i class="fas fa-chart-line me-3"></i>
+                            <span>Dashboard Admin</span>
+                        </a>
+                        <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark admin-only" href="/Admin/Users">
+                            <i class="fas fa-users-cog me-3"></i>
+                            <span>Utenti</span>
+                        </a>
+                        <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark admin-only" href="/Admin/Parkings">
+                            <i class="fas fa-parking me-3"></i>
+                            <span>Parcheggi</span>
+                        </a>
+                        <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark admin-only" href="/Admin/Vehicles">
+                            <i class="fas fa-car-side me-3"></i>
+                            <span>Mezzi</span>
+                        </a>
+                        <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark admin-only" href="/Admin/Maintenance">
+                            <i class="fas fa-tools me-3"></i>
+                            <span>Manutenzione</span>
+                        </a>
+                    }
                 </div>
             </div>
 

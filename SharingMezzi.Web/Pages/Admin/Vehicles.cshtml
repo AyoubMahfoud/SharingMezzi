@@ -1,0 +1,187 @@
+@page
+@model SharingMezzi.Web.Pages.Admin.VehiclesModel
+@{
+    ViewData["Title"] = "Gestione Mezzi";
+}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Gestione Mezzi</h1>
+            <p class="text-muted">Aggiungi, rimuovi o metti mezzi in manutenzione</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateVehicleModal()">
+            <i class="fas fa-plus me-2"></i> Nuovo Mezzo
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Modello</th>
+                        <th>Tipo</th>
+                        <th>Stato</th>
+                        <th>Batteria</th>
+                        <th>Parcheggio</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="vehiclesTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Vehicle Modal -->
+<div class="modal fade" id="createVehicleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuovo Mezzo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createVehicleForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Modello</label>
+                        <input type="text" class="form-control" name="modello" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-select" name="tipo">
+                            <option value="Bicicletta">Bicicletta</option>
+                            <option value="Scooter">Scooter</option>
+                            <option value="Auto">Auto</option>
+                            <option value="Monopattino">Monopattino</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="isElettrico" name="isElettrico">
+                        <label class="form-check-label" for="isElettrico">Elettrico</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tariffa per minuto</label>
+                        <input type="number" class="form-control" name="tariffaPerMinuto" step="0.01" value="0.20">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Crea</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function fetchVehicles() {
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch('/api/mezzi', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) throw new Error('Errore caricamento mezzi');
+                const data = await res.json();
+                const tbody = document.getElementById('vehiclesTable');
+                tbody.innerHTML = '';
+                data.forEach(v => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${v.modello}</td>
+                        <td>${v.tipo}</td>
+                        <td>${v.stato}</td>
+                        <td>${v.livelloBatteria ?? '-' }</td>
+                        <td>${v.parcheggioId ?? 'N/A'}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-warning" onclick="setMaintenance(${v.id})"><i class="fas fa-tools"></i></button>
+                                <button class="btn btn-outline-danger" onclick="deleteVehicle(${v.id})"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                showAlert(e.message || 'Errore', 'error');
+            }
+        }
+
+        function openCreateVehicleModal() {
+            const modal = new bootstrap.Modal(document.getElementById('createVehicleModal'));
+            modal.show();
+        }
+
+        document.getElementById('createVehicleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            const payload = {
+                Modello: f.modello.value,
+                Tipo: f.tipo.value,
+                IsElettrico: f.isElettrico.checked,
+                TariffaPerMinuto: parseFloat(f.tariffaPerMinuto.value)
+            };
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch('/api/admin/vehicles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(payload)
+                });
+                if (res.status === 201) {
+                    showAlert('Mezzo creato', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('createVehicleModal')).hide();
+                    fetchVehicles();
+                } else {
+                    const err = await res.json();
+                    showAlert(err.message || 'Errore', 'error');
+                }
+            } catch (err) {
+                showAlert('Errore di connessione', 'error');
+            }
+        });
+
+        async function deleteVehicle(id) {
+            if (!confirm('Eliminare questo mezzo?')) return;
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`/api/mezzi/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                if (res.status === 204) {
+                    showAlert('Mezzo eliminato', 'success');
+                    fetchVehicles();
+                } else {
+                    showAlert('Errore durante l\'eliminazione', 'error');
+                }
+            } catch (e) {
+                showAlert('Errore di connessione', 'error');
+            }
+        }
+
+        async function setMaintenance(id) {
+            if (!confirm('Mettere questo mezzo in manutenzione?')) return;
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`/api/admin/vehicles/${id}/maintenance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ note: 'Manutenzione programmata da admin' })
+                });
+                if (res.ok) {
+                    showAlert('Mezzo messo in manutenzione', 'success');
+                    fetchVehicles();
+                } else {
+                    const err = await res.json();
+                    showAlert(err.message || 'Errore', 'error');
+                }
+            } catch (e) {
+                showAlert('Errore di connessione', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchVehicles();
+        });
+    </script>
+}

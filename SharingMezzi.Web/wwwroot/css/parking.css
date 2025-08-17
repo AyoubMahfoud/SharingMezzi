@@ -1,0 +1,678 @@
+/* ===== PARKING PAGE COMPLETE STYLES ===== */
+
+/* Force Background for Parking Page */
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    min-height: 100vh;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* prevent horizontal scrollbar when cards are centered */
+}
+
+/* ===== LAYOUT ADJUSTMENTS ===== */
+
+/* Main Content Container (centrato e senza sidebar offset) */
+.main-content {
+    margin: 0 auto;
+    padding: 2rem;
+    min-height: 100vh;
+    max-width: 1400px;
+    width: 100%;
+}
+
+@media (max-width: 991px) {
+    .main-content {
+        margin: 0 auto;
+        padding: 1rem;
+    }
+}
+
+/* ===== PAGE HEADER SECTION ===== */
+.page-header-section {
+    background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+    backdrop-filter: blur(8px);
+    border-radius: 24px;
+    padding: 2.6rem 3rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 36px rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    overflow: hidden;
+}
+
+.page-title {
+    color: #ffffff;
+    font-size: 2.1rem;
+    font-weight: 800;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.page-subtitle {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.05rem;
+    margin: 0;
+    opacity: 0.95;
+}
+
+/* Ensure header inner content stacks nicely on small widths */
+.page-header-section .d-flex {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Make the header button stand out and stay inside */
+.page-header-section .btn {
+    flex: 0 0 auto;
+}
+
+/* ===== STATS CARDS ===== */
+.stat-card {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    border-radius: 18px;
+    padding: 1.5rem 2rem;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    transition: all 0.28s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* keep label and value separated */
+    gap: 1rem;
+    height: auto;
+    min-height: 120px;
+}
+
+.stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.stat-card.primary .stat-icon { 
+    background: linear-gradient(135deg, #667eea, #764ba2); 
+}
+.stat-card.success .stat-icon { 
+    background: linear-gradient(135deg, #56ab2f, #a8e6cf); 
+}
+.stat-card.warning .stat-icon { 
+    background: linear-gradient(135deg, #f093fb, #f5576c); 
+}
+.stat-card.info .stat-icon { 
+    background: linear-gradient(135deg, #4facfe, #00f2fe); 
+}
+
+.stat-content {
+    flex: 1 1 0;
+    min-width: 0; /* allow text to truncate/wrap inside flex */
+    text-align: left;
+}
+
+.stat-value {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #102028;
+    margin-bottom: 0.15rem;
+    line-height: 1;
+}
+
+.stat-label {
+    color: #6b7780;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 0.15rem;
+}
+
+.stat-change {
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #4b5563;
+}
+
+.stat-change.positive { 
+    color: #27ae60; 
+}
+
+/* ===== CONTENT CARDS ===== */
+.content-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.content-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-header h3 {
+    color: #2c3e50;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-header p {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin: 0 0 1.5rem 0;
+}
+
+/* ===== PARKING CARDS LAYOUT (centered columns) ===== */
+#parkingGrid {
+    /* Use flex so narrow cards are centered with large gutters like the design */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2.5rem;
+    justify-content: center; /* center columns */
+    align-items: flex-start;
+    margin: 0 auto;
+    padding-bottom: 2rem;
+}
+
+/* Override Bootstrap column widths for the parking grid so each column shrinks to fit the narrow card */
+#parkingGrid > [class*="col-"],
+#parkingGrid > div[data-parking-id] {
+    flex: 0 0 auto; /* don't stretch */
+    width: auto !important; /* ignore bootstrap percentage widths */
+    max-width: none !important;
+    display: flex;
+    justify-content: center; /* center the inner card */
+}
+
+.parking-card {
+    margin: 0.25rem 0.25rem;
+}
+
+.parking-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: visible; /* ensure shadows and overflow are visible */
+    height: auto;
+    min-height: 480px; /* taller cards to match visual */
+    width: 260px; /* fixed narrow column width */
+    max-width: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.parking-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.parking-card:hover::before {
+    opacity: 1;
+}
+
+.parking-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15) !important;
+}
+
+.parking-card .card-header {
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+
+.parking-card .card-header h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.parking-card .parking-details {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.parking-card .parking-actions {
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+.parking-stat {
+    padding: 0.75rem 0;
+    text-align: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.parking-stat:last-child {
+    border-bottom: none;
+}
+
+.parking-stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    display: block;
+    line-height: 1;
+}
+
+.parking-stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.parking-details {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.parking-details .row {
+    margin: 0;
+}
+
+.parking-details .col-4 {
+    padding: 0 0.5rem;
+}
+
+.availability-text {
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+}
+
+.empty-state i {
+    opacity: 0.5;
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h4 {
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+.parking-actions {
+    margin-top: 1rem;
+}
+
+.parking-actions .btn {
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+}
+
+.parking-actions .btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s;
+}
+
+.parking-actions .btn:hover::before {
+    left: 100%;
+}
+
+.parking-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.parking-actions .btn-primary:hover {
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.parking-actions .btn-success:hover {
+    box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+}
+
+.parking-actions .btn-outline-success:hover {
+    box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+}
+
+/* ===== PROGRESS BARS ===== */
+.progress {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 25%, rgba(255, 255, 255, 0.2) 50%, transparent 75%);
+    animation: progressShine 2s infinite;
+}
+
+@keyframes progressShine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Small animation used by some page components */
+.animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive tweaks for small screens */
+@media (max-width: 768px) {
+    #parkingGrid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .parking-card { min-height: auto; }
+}
+
+/* Desktop: render stats row as four wide cards like the design */
+@media (min-width: 992px) {
+    /* target the stats row immediately following header */
+    .page-header-section + .row.g-4.mb-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.75rem;
+        align-items: stretch;
+    }
+
+    .page-header-section + .row.g-4.mb-4 .stat-card {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 1.6rem 2.25rem;
+        min-height: 140px;
+        border-radius: 18px;
+    }
+
+    .page-header-section + .row.g-4.mb-4 .stat-icon {
+        flex: 0 0 64px;
+        width: 64px;
+        height: 64px;
+        margin-right: 1.2rem;
+    }
+
+    .page-header-section + .row.g-4.mb-4 .stat-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.1rem;
+    }
+
+    .page-header-section + .row.g-4.mb-4 .stat-value {
+        font-size: 2.6rem;
+    }
+
+    .page-header-section + .row.g-4.mb-4 .stat-label {
+        font-size: 0.85rem;
+        color: #6b7780;
+        font-weight: 700;
+    }
+}
+
+/* Medium screens: allow slightly wider cards but keep them centered */
+@media (max-width: 1200px) and (min-width: 769px) {
+    .parking-card {
+        width: 300px;
+        max-width: 300px;
+        min-height: 420px;
+    }
+}
+
+/* Very small screens: keep full width single column */
+@media (max-width: 576px) {
+    .parking-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 360px;
+    }
+    #parkingGrid {
+        display: block;
+    }
+}
+
+/* ===== BADGES ===== */
+.badge {
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== FORM CONTROLS ===== */
+.form-control, .form-select {
+    border-radius: 12px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    background: rgba(255, 255, 255, 1);
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.75rem;
+}
+
+/* ===== NAVBAR STYLES ===== */
+.navbar {
+    backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.navbar-brand i {
+    font-size: 1.8rem;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 2rem;
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+    
+    .page-header-section {
+    padding: 1.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+    }
+    
+    .stat-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+        padding: 1.5rem;
+        height: auto;
+        min-height: 120px;
+    }
+    
+    .stat-icon {
+        margin: 0 auto;
+    }
+    
+    .stat-content {
+        text-align: center;
+    }
+    
+    .parking-actions .btn {
+        font-size: 0.9rem;
+        padding: 0.6rem 1rem;
+    }
+    
+    .content-card {
+        padding: 1rem;
+    }
+    
+    .parking-stat-value {
+        font-size: 1.25rem;
+    }
+    
+    #parkingGrid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .main-content {
+        padding: 1rem;
+    }
+    
+    .navbar-nav {
+        margin-top: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .main-content {
+        padding: 1rem 0.5rem;
+    }
+    
+    .page-header-section {
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+        padding: 1rem;
+    }
+    
+    .parking-actions .row .col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+        min-height: 100px;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .parking-card {
+        min-height: 350px;
+    }
+}
+
+/* ===== UTILITY CLASSES ===== */
+.text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.glass-effect {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+}
+
+/* ===== CUSTOM SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}

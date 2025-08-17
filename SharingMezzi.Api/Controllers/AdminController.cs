@@ -11,7 +11,7 @@ namespace SharingMezzi.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // Solo utenti autenticati
+    [Authorize(Roles = "Admin,Amministratore")] // Solo utenti autenticati con ruolo admin
     public class AdminController : ControllerBase
     {
         private readonly SharingMezziContext _context;
@@ -37,8 +37,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Ottieni statistiche dashboard admin
         /// </summary>
-        [HttpGet("statistics")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpGet("statistics")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult<AdminStatisticsDto>> GetStatistics()
         {
             try
@@ -73,8 +73,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Ottieni mezzi che necessitano manutenzione
         /// </summary>
-        [HttpGet("maintenance-alerts")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpGet("maintenance-alerts")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult<IEnumerable<MaintenanceAlertDto>>> GetMaintenanceAlerts()
         {
             try
@@ -128,8 +128,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Forza aggiornamento di tutti i parcheggi
         /// </summary>
-        [HttpPost("refresh-all")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpPost("refresh-all")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<IActionResult> RefreshAllParkings()
         {
             try
@@ -154,8 +154,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Ottieni stato sistema IoT/MQTT
         /// </summary>
-        [HttpGet("system-status")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpGet("system-status")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public ActionResult<SystemStatusDto> GetSystemStatus()
         {
             try
@@ -186,8 +186,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Programma manutenzione per un mezzo
         /// </summary>
-        [HttpPost("schedule-maintenance/{mezzoId}")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpPost("schedule-maintenance/{mezzoId}")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<IActionResult> ScheduleMaintenance(int mezzoId, [FromBody] ScheduleMaintenanceDto request)
         {
             try
@@ -233,8 +233,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Ottieni tutti gli utenti (solo admin)
         /// </summary>
-        [HttpGet("users")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpGet("users")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult<IEnumerable<UtenteDto>>> GetAllUsers()
         {
             try
@@ -269,8 +269,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Ottieni utenti sospesi (solo admin)
         /// </summary>
-        [HttpGet("users/suspended")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpGet("users/suspended")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult<IEnumerable<UtenteDto>>> GetSuspendedUsers()
         {
             try
@@ -302,8 +302,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Sblocca utente sospeso (solo admin)
         /// </summary>
-        [HttpPost("users/{userId}/unblock")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpPost("users/{userId}/unblock")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult> UnblockUser(int userId, [FromBody] AdminSbloccaUtenteDto request)
         {
             try
@@ -339,8 +339,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Sospendi utente (solo admin)
         /// </summary>
-        [HttpPost("users/{userId}/suspend")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpPost("users/{userId}/suspend")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult> SuspendUser(int userId, [FromBody] AdminSospendUtenteDto request)
         {
             try
@@ -376,8 +376,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Ripara mezzo in manutenzione (solo admin)
         /// </summary>
-        [HttpPost("vehicles/{mezzoId}/repair")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpPost("vehicles/{mezzoId}/repair")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult> RepairVehicle(int mezzoId, [FromBody] AdminRiparazioneMezzoDto request)
         {
             try
@@ -432,8 +432,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Crea nuovo parcheggio (solo admin)
         /// </summary>
-        [HttpPost("parking")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpPost("parking")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult<ParcheggioDto>> CreateParking([FromBody] CreateParcheggioDto createDto)
         {
             try
@@ -475,8 +475,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Crea nuovo mezzo (solo admin)
         /// </summary>
-        [HttpPost("vehicles")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpPost("vehicles")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult<MezzoDto>> CreateVehicle([FromBody] CreateMezzoDto createDto)
         {
             try
@@ -524,8 +524,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Metti mezzo in manutenzione (solo admin)
         /// </summary>
-        [HttpPost("vehicles/{mezzoId}/maintenance")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpPost("vehicles/{mezzoId}/maintenance")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult> SetVehicleMaintenance(int mezzoId, [FromBody] AdminManutenzioneDto request)
         {
             try
@@ -578,8 +578,8 @@ namespace SharingMezzi.Api.Controllers
         /// <summary>
         /// Ottieni tutti i mezzi in manutenzione (solo admin)
         /// </summary>
-        [HttpGet("vehicles/maintenance")]
-        [Authorize(Roles = "Amministratore")]
+    [HttpGet("vehicles/maintenance")]
+    [Authorize(Roles = "Admin,Amministratore")]
         public async Task<ActionResult<IEnumerable<MezzoMaintenanceDto>>> GetVehiclesInMaintenance()
         {
             try

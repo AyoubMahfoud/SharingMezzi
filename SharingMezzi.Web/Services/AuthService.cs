@@ -65,114 +65,140 @@ namespace SharingMezzi.Web.Services
             }
         }
 
-        public async Task<bool> RegisterAsync(RegisterRequest request)
+        // SOSTITUISCI IL METODO RegisterAsync nel tuo AuthService.cs con questo:
+
+// SOSTITUISCI SOLO IL METODO RegisterAsync nel tuo AuthService.cs esistente con questo:
+
+// SOSTITUISCI il metodo RegisterAsync nel tuo AuthService.cs del frontend con questo:
+
+public async Task<bool> RegisterAsync(RegisterRequest request)
+{
+    try
+    {
+        Console.WriteLine($"=== REGISTRATION DEBUG START ===");
+        Console.WriteLine($"📧 Email: {request.Email}");
+        Console.WriteLine($"👤 Nome: {request.Nome}");
+        Console.WriteLine($"👤 Cognome: {request.Cognome}");
+        Console.WriteLine($"📱 Telefono: {request.Telefono ?? "NULL"}");
+        Console.WriteLine($"🔑 Password Length: {request.Password?.Length ?? 0}");
+        Console.WriteLine($"✅ Accept Terms: {request.AcceptTerms}");
+        Console.WriteLine($"🔌 API Base URL: {_apiService.GetBaseUrl()}");
+        
+        // Prepara richiesta API (rimuovi ConfirmPassword)
+        var apiRequest = new 
         {
-            try
+            Nome = request.Nome?.Trim(),
+            Cognome = request.Cognome?.Trim(),
+            Email = request.Email?.Trim().ToLower(),
+            Password = request.Password,
+            Telefono = request.Telefono?.Trim()
+        };
+        
+        Console.WriteLine($"📤 API Request: {Newtonsoft.Json.JsonConvert.SerializeObject(apiRequest)}");
+        
+        // USA SOLO l'endpoint corretto che funziona
+        Console.WriteLine($"🔄 Calling registration endpoint: /api/auth/register");
+        var response = await _apiService.PostAsync<AuthResponse>("/api/auth/register", apiRequest);
+        
+        Console.WriteLine($"📊 Registration Response:");
+        Console.WriteLine($"   Success: {response?.Success}");
+        Console.WriteLine($"   Message: {response?.Message}");
+        Console.WriteLine($"   Token: {(!string.IsNullOrEmpty(response?.Token) ? "Present" : "Missing")}");
+        
+        if (response?.Success == true)
+        {
+            Console.WriteLine($"✅ Registration successful!");
+            
+            // Se la registrazione include automaticamente il login (con token), salva i dati
+            if (!string.IsNullOrEmpty(response.Token) && response.User != null)
             {
-                Console.WriteLine($"Tentativo di registrazione per l'utente: {request.Email}");
-                
-                // Rimuoviamo la password dalla richiesta per il logging
-                var logRequest = new { 
-                    request.Nome, 
-                    request.Cognome, 
-                    request.Email, 
-                    request.Telefono, 
-                    PasswordLength = request.Password?.Length ?? 0 
-                };
-                Console.WriteLine($"Dati di registrazione: {Newtonsoft.Json.JsonConvert.SerializeObject(logRequest)}");
-                
-                // Rimuovi la conferma password prima di inviare al server (non necessaria per l'API)
-                var apiRequest = new RegisterRequest
-                {
-                    Nome = request.Nome,
-                    Cognome = request.Cognome,
-                    Email = request.Email,
-                    Password = request.Password,
-                    Telefono = request.Telefono
-                };
-                
-                var response = await _apiService.PostAsync<AuthResponse>("/api/auth/register", apiRequest);
-                
-                if (response?.Success == true)
-                {
-                    Console.WriteLine($"Registrazione avvenuta con successo per: {request.Email}");
-                    return true;
-                }
-                else
-                {
-                    Console.WriteLine($"Registrazione fallita: {response?.Message ?? "Risposta nulla"}");
-                    return false;
-                }
+                SetToken(response.Token);
+                SetCurrentUser(response.User);
+                Console.WriteLine($"🔑 User automatically logged in after registration");
             }
-            catch (Exception ex)
+            
+            return true;
+        }
+        else
+        {
+            Console.WriteLine($"❌ Registration failed: {response?.Message ?? "Unknown error"}");
+            return false;
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"💥 REGISTRATION EXCEPTION: {ex.Message}");
+        Console.WriteLine($"💥 Stack Trace: {ex.StackTrace}");
+        return false;
+    }
+    finally
+    {
+        Console.WriteLine($"=== REGISTRATION DEBUG END ===");
+    }
+}
+
+public void LogoutAsync()
+{
+    try
+    {
+        Console.WriteLine("=== LOGOUT START ===");
+        ClearSession();
+        Console.WriteLine("Logout completato con successo");
+        Console.WriteLine("=== LOGOUT END ===");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Errore durante il logout: {ex.Message}");
+    }
+}
+
+public string? GetToken()
+{
+    try
+    {
+        var session = _httpContextAccessor.HttpContext?.Session;
+        if (session != null)
+        {
+            var token = session.GetString(TokenKey);
+            Console.WriteLine($"Token recuperato dalla sessione: {(!string.IsNullOrEmpty(token) ? "Present" : "Missing")}");
+            return token;
+        }
+        
+        Console.WriteLine("Sessione non disponibile per recuperare il token");
+        return null;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Errore nel recupero del token: {ex.Message}");
+        return null;
+    }
+}
+
+public User? GetCurrentUser()
+{
+    try
+    {
+        var session = _httpContextAccessor.HttpContext?.Session;
+        if (session != null)
+        {
+            var userJson = session.GetString(UserKey);
+            if (!string.IsNullOrEmpty(userJson))
             {
-                Console.WriteLine($"Eccezione durante la registrazione: {ex.Message}");
-                return false;
+                var user = Newtonsoft.Json.JsonConvert.DeserializeObject<User>(userJson);
+                Console.WriteLine($"Utente recuperato dalla sessione: {user?.Email ?? "Unknown"}");
+                return user;
             }
         }
-
-        public void LogoutAsync()
-        {
-            try
-            {
-                Console.WriteLine("Esecuzione logout...");
-                ClearSession();
-                Console.WriteLine("Logout completato con successo");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Errore durante il logout: {ex.Message}");
-            }
-        }
-
-        public string? GetToken()
-        {
-            try
-            {
-                var session = _httpContextAccessor.HttpContext?.Session;
-                if (session != null)
-                {
-                    var token = session.GetString(TokenKey);
-                    Console.WriteLine($"Token recuperato dalla sessione: {(!string.IsNullOrEmpty(token) ? "Present" : "Missing")}");
-                    return token;
-                }
-                
-                Console.WriteLine("Sessione non disponibile per recuperare il token");
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Errore nel recupero del token: {ex.Message}");
-                return null;
-            }
-        }
-
-        public User? GetCurrentUser()
-        {
-            try
-            {
-                var session = _httpContextAccessor.HttpContext?.Session;
-                if (session != null)
-                {
-                    var userJson = session.GetString(UserKey);
-                    if (!string.IsNullOrEmpty(userJson))
-                    {
-                        var user = Newtonsoft.Json.JsonConvert.DeserializeObject<User>(userJson);
-                        Console.WriteLine($"Utente recuperato dalla sessione: {user?.Email ?? "Unknown"}");
-                        return user;
-                    }
-                }
-                
-                Console.WriteLine("Nessun utente trovato nella sessione");
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Errore nel recupero dell'utente: {ex.Message}");
-                return null;
-            }
-        }
-
+        
+        Console.WriteLine("Nessun utente trovato nella sessione");
+        return null;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Errore nel recupero dell'utente: {ex.Message}");
+        return null;
+    }
+}
         // ===== METODO ASYNC AGGIUNTO =====
         public async Task<User?> GetCurrentUserAsync()
         {

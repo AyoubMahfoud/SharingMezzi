@@ -107,6 +107,146 @@ namespace SharingMezzi.Api.Controllers
             }
         }
 
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("=== REGISTRATION REQUEST RICEVUTA ===");
+                _logger.LogInformation("Request is null: {IsNull}", request == null);
+                
+                if (request == null)
+                {
+                    _logger.LogError("RegisterRequest è null - problema di deserializzazione");
+                    return BadRequest(new { Success = false, Message = "Dati di registrazione non validi" });
+                }
+                
+                _logger.LogInformation("Email ricevuta: '{Email}', Nome: '{Nome}', Cognome: '{Cognome}'", 
+                    request.Email ?? "NULL", request.Nome ?? "NULL", request.Cognome ?? "NULL");
+                
+                // Verifica ModelState
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("ModelState non valido:");
+                    foreach (var error in ModelState)
+                    {
+                        _logger.LogWarning("  {Key}: {Errors}", error.Key, string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage)));
+                    }
+                    return BadRequest(new { Success = false, Message = "Dati di registrazione non validi", Errors = ModelState });
+                }
+
+                // Validazione campi obbligatori
+                if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password) || 
+                    string.IsNullOrEmpty(request.Nome) || string.IsNullOrEmpty(request.Cognome))
+                {
+                    _logger.LogWarning("Campi obbligatori mancanti - Email: '{Email}', Nome: '{Nome}', Cognome: '{Cognome}', Password empty: {PasswordEmpty}", 
+                        request.Email ?? "NULL", request.Nome ?? "NULL", request.Cognome ?? "NULL", string.IsNullOrEmpty(request.Password));
+                    return BadRequest(new { Success = false, Message = "Nome, Cognome, Email e Password sono obbligatori" });
+                }
+
+                // Verifica se l'email esiste già
+                var existingUser = await _context.Utenti
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
+
+                if (existingUser != null)
+                {
+                    _logger.LogWarning("Email già registrata: {Email}", request.Email);
+                    return BadRequest(new { Success = false, Message = "Email già registrata" });
+                }
+
+                // Crea nuovo utente
+                var newUser = new SharingMezzi.Core.Entities.Utente
+                {
+                    Nome = request.Nome.Trim(),
+                    Cognome = request.Cognome.Trim(),
+                    Email = request.Email.Trim().ToLower(),
+                    Password = HashPassword(request.Password),
+                    Telefono = request.Telefono?.Trim(),
+                    DataRegistrazione = DateTime.UtcNow,
+                    Credito = 0 // Credito iniziale
+                };
+
+                // Imposta proprietà dinamicamente per gestire diversi schemi
+                var userType = newUser.GetType();
+                
+                // Imposta Ruolo
+                var ruoloProperty = userType.GetProperty("Ruolo");
+                if (ruoloProperty != null && ruoloProperty.PropertyType.IsEnum)
+                {
+                    try
+                    {
+                        var utenteRole = Enum.Parse(ruoloProperty.PropertyType, "Utente");
+                        ruoloProperty.SetValue(newUser, utenteRole);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning("Impossibile impostare il ruolo: {Error}", ex.Message);
+                    }
+                }
+                
+                // Imposta Stato se esiste
+                var statoProperty = userType.GetProperty("Stato");
+                if (statoProperty != null && statoProperty.PropertyType.IsEnum)
+                {
+                    try
+                    {
+                        var attivoValue = Enum.Parse(statoProperty.PropertyType, "Attivo");
+                        statoProperty.SetValue(newUser, attivoValue);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning("Impossibile impostare lo stato: {Error}", ex.Message);
+                    }
+                }
+                
+                // Imposta PuntiEco se esiste
+                var puntiEcoProperty = userType.GetProperty("PuntiEco");
+                if (puntiEcoProperty != null)
+                {
+                    try
+                    {
+                        puntiEcoProperty.SetValue(newUser, 0);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning("Impossibile impostare i punti eco: {Error}", ex.Message);
+                    }
+                }
+
+                _context.Utenti.Add(newUser);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Utente registrato con successo: {Email}", request.Email);
+
+                // Genera token per l'utente appena registrato
+                var token = GenerateJwtToken(newUser);
+
+                var response = new
+                {
+                    Success = true,
+                    Message = "Registrazione completata con successo",
+                    Token = token,
+                    User = new
+                    {
+                        Id = newUser.Id,
+                        Nome = newUser.Nome,
+                        Cognome = newUser.Cognome,
+                        Email = newUser.Email,
+                        Ruolo = GetUserRole(newUser),
+                        Credito = newUser.Credito,
+                        PuntiEco = GetUserPoints(newUser)
+                    }
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Errore durante la registrazione per {Email}", request?.Email ?? "unknown");
+                return StatusCode(500, new { Success = false, Message = "Errore interno del server durante la registrazione" });
+            }
+        }
+
         [HttpPost("create-admin")]
         public async Task<IActionResult> CreateAdmin()
         {
@@ -260,5 +400,14 @@ namespace SharingMezzi.Api.Controllers
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+    }
+
+    public class RegisterRequest
+    {
+        public string Nome { get; set; } = string.Empty;
+        public string Cognome { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string? Telefono { get; set; }
     }
 }

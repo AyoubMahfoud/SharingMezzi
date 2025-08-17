@@ -1,0 +1,155 @@
+@page
+@model SharingMezzi.Web.Pages.Admin.ParkingsModel
+@{
+    ViewData["Title"] = "Gestione Parcheggi";
+}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Gestione Parcheggi</h1>
+            <p class="text-muted">Aggiungi, modifica o rimuovi parcheggi</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateParkingModal()">
+            <i class="fas fa-plus me-2"></i> Nuovo Parcheggio
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Indirizzo</th>
+                        <th>Capienza</th>
+                        <th>Posti Liberi</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="parkingsTable">
+                    <!-- populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Parking Modal -->
+<div class="modal fade" id="createParkingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuovo Parcheggio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createParkingForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome</label>
+                        <input type="text" class="form-control" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Indirizzo</label>
+                        <input type="text" class="form-control" name="indirizzo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Capienza</label>
+                        <input type="number" class="form-control" name="capienza" min="1" value="10" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Crea</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function fetchParkings() {
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch('/api/parcheggi', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) throw new Error('Errore caricamento parcheggi');
+                const data = await res.json();
+                const tbody = document.getElementById('parkingsTable');
+                tbody.innerHTML = '';
+                data.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${p.nome}</td>
+                        <td>${p.indirizzo}</td>
+                        <td>${p.capienza}</td>
+                        <td>${p.postiLiberi}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-danger" onclick="deleteParking(${p.id})"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                showAlert(e.message || 'Errore', 'error');
+            }
+        }
+
+        function openCreateParkingModal() {
+            const modal = new bootstrap.Modal(document.getElementById('createParkingModal'));
+            modal.show();
+        }
+
+        document.getElementById('createParkingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            const payload = {
+                Nome: f.nome.value,
+                Indirizzo: f.indirizzo.value,
+                Capienza: parseInt(f.capienza.value, 10)
+            };
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch('/api/admin/parking', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    showAlert('Parcheggio creato', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('createParkingModal')).hide();
+                    fetchParkings();
+                } else {
+                    const err = await res.json();
+                    showAlert(err.message || 'Errore', 'error');
+                }
+            } catch (err) {
+                showAlert('Errore di connessione', 'error');
+            }
+        });
+
+        async function deleteParking(id) {
+            if (!confirm('Eliminare questo parcheggio?')) return;
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`/api/parcheggi/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                if (res.status === 204) {
+                    showAlert('Parcheggio eliminato', 'success');
+                    fetchParkings();
+                } else {
+                    showAlert('Errore durante l\'eliminazione', 'error');
+                }
+            } catch (e) {
+                showAlert('Errore di connessione', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchParkings();
+        });
+    </script>
+}

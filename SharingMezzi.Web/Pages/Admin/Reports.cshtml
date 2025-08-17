@@ -24,6 +24,9 @@
     </div>
 </div>
 
+<!-- Admin stats error banner (hidden by default) -->
+<div id="admin-stats-error" class="alert alert-warning mt-3 d-none" role="alert" style="display:none;"></div>
+
 <!-- KPI Cards -->
 <div class="row mb-4">
     <div class="col-md-2">
@@ -31,14 +34,14 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h3 class="mb-0">@Model.TotalUsers</h3>
+                        <h3 id="kpi-total-users" class="mb-0">@Model.TotalUsers</h3>
                         <p class="text-muted mb-0">Utenti</p>
                     </div>
                     <div class="stat-icon bg-primary">
                         <i class="fas fa-users"></i>
                     </div>
                 </div>
-                <small class="text-success">+@Model.NewUsersThisMonth questa settimana</small>
+                <small id="kpi-new-users" class="text-success">+@Model.NewUsersThisMonth questa settimana</small>
             </div>
         </div>
     </div>
@@ -47,14 +50,14 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h3 class="mb-0">@Model.TotalVehicles</h3>
+                        <h3 id="kpi-total-vehicles" class="mb-0">@Model.TotalVehicles</h3>
                         <p class="text-muted mb-0">Mezzi</p>
                     </div>
                     <div class="stat-icon bg-success">
                         <i class="fas fa-car"></i>
                     </div>
                 </div>
-                <small class="text-success">@Model.ActiveVehicles attivi</small>
+                <small id="kpi-active-vehicles" class="text-success">@Model.ActiveVehicles attivi</small>
             </div>
         </div>
     </div>
@@ -63,14 +66,14 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h3 class="mb-0">@Model.TotalTrips</h3>
+                        <h3 id="kpi-total-trips" class="mb-0">@Model.TotalTrips</h3>
                         <p class="text-muted mb-0">Corse</p>
                     </div>
                     <div class="stat-icon bg-warning">
                         <i class="fas fa-route"></i>
                     </div>
                 </div>
-                <small class="text-info">@Model.TripsToday oggi</small>
+                <small id="kpi-trips-today" class="text-info">@Model.TripsToday oggi</small>
             </div>
         </div>
     </div>
@@ -79,14 +82,14 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h3 class="mb-0">€@Model.TotalRevenue.ToString("F0")</h3>
+                        <h3 id="kpi-total-revenue" class="mb-0">€@Model.TotalRevenue.ToString("F0")</h3>
                         <p class="text-muted mb-0">Ricavi</p>
                     </div>
                     <div class="stat-icon bg-info">
                         <i class="fas fa-euro-sign"></i>
                     </div>
                 </div>
-                <small class="text-success">+@Model.RevenueGrowth% questo mese</small>
+                <small id="kpi-revenue-growth" class="text-success">+@Model.RevenueGrowth% questo mese</small>
             </div>
         </div>
     </div>
@@ -95,14 +98,14 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h3 class="mb-0">@Model.TotalParkings</h3>
+                        <h3 id="kpi-total-parkings" class="mb-0">@Model.TotalParkings</h3>
                         <p class="text-muted mb-0">Parcheggi</p>
                     </div>
                     <div class="stat-icon bg-secondary">
                         <i class="fas fa-parking"></i>
                     </div>
                 </div>
-                <small class="text-warning">@Model.AvailableSlots posti liberi</small>
+                <small id="kpi-available-slots" class="text-warning">@Model.AvailableSlots posti liberi</small>
             </div>
         </div>
     </div>
@@ -111,7 +114,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h3 class="mb-0">@Model.AvgTripDuration</h3>
+                        <h3 id="kpi-avg-duration" class="mb-0">@Model.AvgTripDuration</h3>
                         <p class="text-muted mb-0">Min/Corsa</p>
                     </div>
                     <div class="stat-icon bg-dark">
@@ -248,6 +251,8 @@
         class AdminReportsManager {
             constructor() {
                 this.initializeCharts();
+                // Fetch live stats and refresh UI
+                this.fetchAndRenderStats();
             }
 
             initializeCharts() {
@@ -385,12 +390,83 @@
         };
 
         window.refreshData = function() {
-            location.reload();
+            // Re-fetch stats and refresh charts
+            if (window.adminReportsManager) {
+                window.adminReportsManager.fetchAndRenderStats();
+            } else {
+                location.reload();
+            }
         };
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            new AdminReportsManager();
+            window.adminReportsManager = new AdminReportsManager();
         });
+
+        // Fetch admin statistics from API and update KPIs + charts
+        AdminReportsManager.prototype.fetchAndRenderStats = async function() {
+            const token = localStorage.getItem('token');
+            const tryGet = (obj, keys, fallback = 0) => {
+                for (const k of keys) {
+                    if (obj == null) break;
+                    if (Object.prototype.hasOwnProperty.call(obj, k) && obj[k] !== null && obj[k] !== undefined) return obj[k];
+                }
+                return fallback;
+            };
+
+            try {
+                const res = await fetch('/api/admin/statistics', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) {
+                    let bodyText = '';
+                    try { bodyText = await res.text(); } catch (e) { /* ignore */ }
+                    const errMsg = `Impossibile caricare le statistiche: ${res.status} ${res.statusText} ${bodyText ? '- ' + bodyText : ''}`;
+                    console.warn('Admin statistics fetch failed', res.status, bodyText);
+                    const banner = document.getElementById('admin-stats-error');
+                    if (banner) {
+                        banner.classList.remove('d-none');
+                        banner.style.display = 'block';
+                        banner.textContent = errMsg;
+                    }
+                    return;
+                }
+                const stats = await res.json();
+
+                // Read values trying multiple possible JSON property namings (PascalCase / camelCase / Italian)
+                const totalUsers = tryGet(stats, ['TotalUsers', 'totalUsers', 'TotalUtenti', 'totalUtenti'], '0');
+                const newUsers = tryGet(stats, ['NewUsersThisMonth', 'newUsersThisMonth', 'NewUsers', 'newUsers'], 0);
+                const totalVehicles = tryGet(stats, ['TotalMezzi', 'totalMezzi', 'TotalVehicles', 'totalVehicles'], '0');
+                const activeVehicles = tryGet(stats, ['MezziDisponibili', 'mezziDisponibili', 'ActiveVehicles', 'activeVehicles', 'MezziInUso', 'mezziInUso'], '0');
+                const totalTrips = tryGet(stats, ['TotalTrips', 'totalTrips', 'CorseTotali', 'corseTotali', 'CorseAttive', 'corseAttive'], '0');
+                const tripsToday = tryGet(stats, ['TripsToday', 'tripsToday'], totalTrips);
+                const totalRevenue = tryGet(stats, ['TotalRevenue', 'totalRevenue', 'Ricavi', 'ricavi'], 0);
+                const revenueGrowth = tryGet(stats, ['RevenueGrowth', 'revenueGrowth'], 0);
+                const totalParkings = tryGet(stats, ['TotalParcheggi', 'totalParcheggi', 'TotalParkings', 'totalParkings'], '0');
+                const availableSlots = tryGet(stats, ['AvailableSlots', 'availableSlots', 'PostiLiberi', 'postiLiberi'], 0);
+                const avgDuration = tryGet(stats, ['AvgTripDuration', 'avgTripDuration', 'AvgDuration', 'avgDuration'], '0');
+
+                document.getElementById('kpi-total-users').textContent = totalUsers;
+                document.getElementById('kpi-new-users').textContent = `+${newUsers} questa settimana`;
+                document.getElementById('kpi-total-vehicles').textContent = totalVehicles;
+                document.getElementById('kpi-active-vehicles').textContent = `${activeVehicles} attivi`;
+                document.getElementById('kpi-total-trips').textContent = totalTrips;
+                document.getElementById('kpi-trips-today').textContent = `${tripsToday} oggi`;
+                document.getElementById('kpi-total-revenue').textContent = `€${totalRevenue}`;
+                document.getElementById('kpi-revenue-growth').textContent = `+${revenueGrowth}% questo mese`;
+                document.getElementById('kpi-total-parkings').textContent = totalParkings;
+                document.getElementById('kpi-available-slots').textContent = `${availableSlots} posti liberi`;
+                document.getElementById('kpi-avg-duration').textContent = avgDuration;
+
+                // Optionally update charts with small synthetic datasets based on stats
+                // (charts were initialized with static data; here we could call chart.update() if we stored references)
+            } catch (e) {
+                console.error('Errore fetching admin statistics', e);
+                const banner = document.getElementById('admin-stats-error');
+                if (banner) {
+                    banner.classList.remove('d-none');
+                    banner.style.display = 'block';
+                    banner.textContent = 'Errore durante il caricamento delle statistiche: ' + (e && e.message ? e.message : String(e));
+                }
+            }
+        };
     </script>
 }

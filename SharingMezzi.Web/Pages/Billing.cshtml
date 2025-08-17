@@ -1,13 +1,43 @@
-@page
+@page "/Billing"
 @model SharingMezzi.Web.Pages.BillingModel
 @using SharingMezzi.Web.Models
 @{
     ViewData["Title"] = "Ricariche e Pagamenti";
+    Layout = "_Layout";
 }
 
-<div class="page-header">
-    <h1 class="page-title">Ricariche e Pagamenti</h1>
-    <p class="page-subtitle">Gestisci il tuo saldo e visualizza lo storico delle transazioni</p>
+@section Styles {
+    <style>
+        .page-header-section {
+            background: linear-gradient(90deg,#6d28d9 0%,#4f46e5 100%);
+            color: white;
+            padding: 2.25rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 30px rgba(79,70,229,0.12);
+        }
+
+        .page-header-section .page-title {
+            font-size: 1.75rem;
+            margin: 0 0 .25rem 0;
+            font-weight: 700;
+        }
+
+        .page-header-section .page-subtitle {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .balance-amount { font-size: 2rem; font-weight: 700; color: #16a34a; }
+        .eco-points { font-size: 1.25rem; font-weight: 700; color: #10b981; }
+    </style>
+}
+
+<div class="page-header-section">
+    <div class="container-fluid">
+        <h1 class="page-title">Ricariche e Pagamenti</h1>
+        <p class="page-subtitle">Gestisci il tuo saldo e visualizza lo storico delle transazioni</p>
+    </div>
 </div>
 
 <!-- Balance Card -->
@@ -161,9 +191,9 @@
                         <label for="paymentMethod" class="form-label">Metodo di pagamento</label>
                         <select class="form-control" id="paymentMethod" name="paymentMethod" required>
                             <option value="">Seleziona metodo</option>
-                            <option value="1">Carta di Credito</option>
-                            <option value="2">PayPal</option>
-                            <option value="3">Bonifico Bancario</option>
+                            <option value="CartaCredito">Carta di Credito</option>
+                            <option value="PayPal">PayPal</option>
+                            <option value="Bonifico">Bonifico Bancario</option>
                         </select>
                     </div>
 
@@ -219,141 +249,248 @@
             document.getElementById('rechargeAmount').value = amount;
         }
 
-        async function processRecharge() {
+        // Small auth helpers to support multiple auth managers (compatibility)
+        const getToken = () => {
+            try {
+                if (typeof app !== 'undefined' && app.getToken) return app.getToken();
+                if (window.authManager && typeof window.authManager.getToken === 'function') return window.authManager.getToken();
+                if (window.AuthManager && typeof window.AuthManager.getToken === 'function') return window.AuthManager.getToken();
+            } catch (e) {
+                console.warn('getToken helper error', e);
+            }
+            return '';
+        };
+
+        const showAlert = (message, type = 'info') => {
+            try {
+                if (typeof app !== 'undefined' && app.showAlert) return app.showAlert(message, type);
+                if (window.authManager && typeof window.authManager.showAlert === 'function') return window.authManager.showAlert(message, type);
+            } catch (e) {
+                console.warn('showAlert helper error', e);
+            }
+            // Fallback
+            alert(message);
+        };
+
+    // Resolve API base URL (prefer auth manager's configured apiBaseUrl, else fallback)
+    const API_BASE = (window.authManager && window.authManager.apiBaseUrl) || window.API_BASE || 'http://localhost:5000';
+
+    // Refresh billing data from backend (A)
+    async function refreshBilling() {
+            try {
+                // Get profile (includes id and credit if available)
+        const profileResp = await fetch(`${API_BASE}/api/user/profile`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+
+                if (profileResp.ok) {
+                    const profile = await profileResp.json();
+                    if (profile) {
+                        document.getElementById('currentBalance').textContent = (profile.credito ?? profile.Credito ?? 0).toFixed(2);
+                        const eco = profile.puntiEco ?? profile.PuntiEco ?? 0;
+                        const ecoEl = document.getElementById('ecoPoints');
+                        if (ecoEl) ecoEl.textContent = eco;
+
+                        // load user recharges
+                        const userId = profile.id ?? profile.Id;
+                        if (userId) {
+                            // Use API route exposed by UserController
+                            const rResp = await fetch(`${API_BASE}/api/user/${userId}/ricariche`, {
+                                headers: { 'Authorization': `Bearer ${getToken()}` }
+                            });
+                            if (rResp.ok) {
+                                const recharges = await rResp.json();
+                                renderRechargesTable(recharges);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('refreshBilling failed', err);
+                // no-op: keep server-rendered content; could show toast
+            }
+        }
+
+        function renderRechargesTable(recharges) {
+            const tbody = document.querySelector('.table tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            if (!recharges || recharges.length === 0) {
+                // nothing — server will show fallback empty state
+                return;
+            }
+            recharges.forEach(r => {
+                const tr = document.createElement('tr');
+                const date = new Date(r.dataRicarica || r.DataRicarica || r.data || Date.now()).toLocaleString();
+                const importo = Number(r.importo ?? r.Importo ?? 0).toFixed(2);
+                const metodo = r.metodoPagamento ?? r.MetodoPagamento ?? '—';
+                const stato = r.stato ?? r.Stato ?? '—';
+                const saldoFinale = Number(r.saldoFinale ?? r.SaldoFinale ?? 0).toFixed(2);
+
+                tr.innerHTML = `
+                    <td>${date}</td>
+                    <td class="fw-bold text-success">+€${importo}</td>
+                    <td><i class="fas fa-wallet me-1"></i>${metodo}</td>
+                    <td><span class="badge bg-secondary">${stato}</span></td>
+                    <td class="fw-bold">€${saldoFinale}</td>
+                    <td><button class="btn btn-outline-primary btn-sm" onclick="showRechargeDetails(${r.id ?? r.Id})"><i class="fas fa-eye"></i></button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+    async function processRecharge() {
             const form = document.getElementById('rechargeForm');
             const formData = new FormData(form);
             
             const rechargeData = {
                 importo: parseFloat(formData.get('amount')),
-                metodoPagamento: parseInt(formData.get('paymentMethod')),
+                // paymentMethod is a string matching enum names (e.g. 'CartaCredito', 'PayPal', 'Bonifico')
+                metodoPagamento: formData.get('paymentMethod'),
                 note: formData.get('notes')
             };
 
             // Validate
             if (rechargeData.importo < 5 || rechargeData.importo > 500) {
-                app.showAlert('Importo non valido. Deve essere tra €5.00 e €500.00', 'warning');
+                showAlert('Importo non valido. Deve essere tra €5.00 e €500.00', 'warning');
                 return;
             }
 
             if (!rechargeData.metodoPagamento) {
-                app.showAlert('Seleziona un metodo di pagamento', 'warning');
+                showAlert('Seleziona un metodo di pagamento', 'warning');
                 return;
             }
 
-            try {
-                const response = await fetch('/api/recharges', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${app.getToken()}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(rechargeData)
-                });
+                try {
+                    // Ensure we have current user id from profile
+                    let userId = 0;
+                    try {
+                        const profileResp = await fetch('/api/user/profile', {
+                            headers: { 'Authorization': `Bearer ${getToken()}` }
+                        });
+                        if (profileResp.ok) {
+                            const profile = await profileResp.json();
+                            userId = profile?.id ?? profile?.Id ?? 0;
+                        }
+                    } catch (pErr) {
+                        console.warn('Could not fetch profile before recharge', pErr);
+                    }
 
-                if (response.ok) {
-                    app.showAlert('Ricarica completata con successo!', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('rechargeModal')).hide();
-                    
-                    // Refresh page to show updated balance
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
-                } else {
-                    app.showAlert('Errore durante la ricarica. Riprova più tardi.', 'danger');
-                }
-            } catch (error) {
+                    // Build payload expected by API: UtenteId, Importo, MetodoPagamento
+                    const payload = {
+                        UtenteId: userId,
+                        Importo: rechargeData.importo,
+                        MetodoPagamento: rechargeData.metodoPagamento // already string values matching enum names
+                    };
+
+                    const response = await fetch(`${API_BASE}/api/user/ricarica-credito`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${getToken()}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        // API returns RicaricaResponseDto with NuovoCredito
+                        const nuovoCredito = data?.NuovoCredito ?? data?.nuovoCredito ?? null;
+                        if (nuovoCredito !== null) {
+                            document.getElementById('currentBalance').textContent = Number(nuovoCredito).toFixed(2);
+                        }
+                        showAlert(data?.Message ?? data?.message ?? 'Ricarica completata con successo!', 'success');
+                        bootstrap.Modal.getInstance(document.getElementById('rechargeModal')).hide();
+                        // refresh list
+                        setTimeout(() => refreshBilling(), 600);
+                    } else {
+                        // Try to extract error message from response body
+                        let errMsg = 'Errore durante la ricarica. Riprova più tardi.';
+                        try {
+                            const err = await response.json();
+                            if (err?.message) errMsg = err.message;
+                        } catch (parseErr) { /* ignore */ }
+                        showAlert(errMsg, 'danger');
+                    }
+                } catch (error) {
                 console.error('Error processing recharge:', error);
-                app.showAlert('Errore di connessione', 'danger');
+                // Fallback simulation (C): append a local fake recharge so UI remains usable offline
+                    showAlert('Backend non raggiungibile: simulazione ricarica locale attivata', 'info');
+                bootstrap.Modal.getInstance(document.getElementById('rechargeModal')).hide();
+
+                // optimistic update: increase balance and add row
+                const current = parseFloat(document.getElementById('currentBalance').textContent || '0');
+                const newBalance = (current + (rechargeData.importo || 0)).toFixed(2);
+                document.getElementById('currentBalance').textContent = newBalance;
+
+                // add a temporary row to table
+                const tbody = document.querySelector('.table tbody');
+                if (tbody) {
+                    const tr = document.createElement('tr');
+                    const now = new Date().toLocaleString();
+                    tr.innerHTML = `
+                        <td>${now}</td>
+                        <td class="fw-bold text-success">+€${(rechargeData.importo||0).toFixed(2)}</td>
+                        <td>Simulazione</td>
+                        <td><span class="badge bg-info">Simulato</span></td>
+                        <td class="fw-bold">€${newBalance}</td>
+                        <td><button class="btn btn-outline-secondary btn-sm" disabled><i class="fas fa-eye"></i></button></td>
+                    `;
+                    tbody.insertBefore(tr, tbody.firstChild);
+                }
             }
         }
 
         async function showRechargeDetails(rechargeId) {
             const modal = new bootstrap.Modal(document.getElementById('rechargeDetailsModal'));
             const content = document.getElementById('rechargeDetailsContent');
-            
             content.innerHTML = '<div class="text-center"><div class="spinner"></div> Caricamento...</div>';
             modal.show();
 
             try {
-                const response = await fetch(`/api/recharges/${rechargeId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${app.getToken()}`
-                    }
+                // Fetch profile to identify user and then request user's ricariche and find the selected one
+                const profileResp = await fetch(`${API_BASE}/api/user/profile`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                if (!profileResp.ok) {
+                    content.innerHTML = '<div class="alert alert-danger">Impossibile recuperare profilo utente</div>';
+                    return;
+                }
+                const profile = await profileResp.json();
+                const userId = profile?.id ?? profile?.Id;
+                if (!userId) {
+                    content.innerHTML = '<div class="alert alert-danger">Utente non identificato</div>';
+                    return;
+                }
+
+                const resp = await fetch(`${API_BASE}/api/user/${userId}/ricariche`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
                 });
 
-                if (response.ok) {
-                    const recharge = await response.json();
-                    content.innerHTML = `
-                        <div class="recharge-details">
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong>ID Transazione:</strong>
-                                </div>
-                                <div class="col-6">
-                                    ${recharge.transactionId || 'N/A'}
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong>Data:</strong>
-                                </div>
-                                <div class="col-6">
-                                    ${new Date(recharge.dataRicarica).toLocaleString()}
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong>Importo:</strong>
-                                </div>
-                                <div class="col-6">
-                                    €${recharge.importo}
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong>Metodo:</strong>
-                                </div>
-                                <div class="col-6">
-                                    ${recharge.metodoPagamento}
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong>Stato:</strong>
-                                </div>
-                                <div class="col-6">
-                                    ${recharge.stato}
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong>Saldo precedente:</strong>
-                                </div>
-                                <div class="col-6">
-                                    €${recharge.saldoPrecedente}
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong>Saldo finale:</strong>
-                                </div>
-                                <div class="col-6">
-                                    €${recharge.saldoFinale}
-                                </div>
-                            </div>
-                            ${recharge.note ? `
-                                <div class="row">
-                                    <div class="col-12">
-                                        <strong>Note:</strong>
-                                        <p class="mt-2">${recharge.note}</p>
-                                    </div>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                } else {
-                    content.innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei dettagli</div>';
+                if (!resp.ok) {
+                    content.innerHTML = '<div class="alert alert-danger">Errore nel recupero dei dettagli</div>';
+                    return;
                 }
+
+                const list = await resp.json();
+                const recharge = (list || []).find(r => (r.id ?? r.Id) === rechargeId);
+                if (!recharge) {
+                    content.innerHTML = '<div class="alert alert-warning">Dettagli non disponibili</div>';
+                    return;
+                }
+
+                content.innerHTML = `
+                    <div class="recharge-details">
+                        <div class="row"><div class="col-6"><strong>ID Transazione:</strong></div><div class="col-6">${recharge.transactionId || recharge.TransactionId || 'N/A'}</div></div>
+                        <div class="row"><div class="col-6"><strong>Data:</strong></div><div class="col-6">${new Date(recharge.dataRicarica || recharge.DataRicarica).toLocaleString()}</div></div>
+                        <div class="row"><div class="col-6"><strong>Importo:</strong></div><div class="col-6">€${Number(recharge.importo ?? recharge.Importo).toFixed(2)}</div></div>
+                        <div class="row"><div class="col-6"><strong>Metodo:</strong></div><div class="col-6">${recharge.metodoPagamento ?? recharge.MetodoPagamento}</div></div>
+                        <div class="row"><div class="col-6"><strong>Stato:</strong></div><div class="col-6">${recharge.stato ?? recharge.Stato}</div></div>
+                        <div class="row"><div class="col-6"><strong>Saldo precedente:</strong></div><div class="col-6">€${Number(recharge.saldoPrecedente ?? recharge.SaldoPrecedente ?? 0).toFixed(2)}</div></div>
+                        <div class="row"><div class="col-6"><strong>Saldo finale:</strong></div><div class="col-6">€${Number(recharge.saldoFinale ?? recharge.SaldoFinale ?? 0).toFixed(2)}</div></div>
+                        ${(recharge.note || recharge.Note) ? `<div class="row"><div class="col-12"><strong>Note:</strong><p class="mt-2">${recharge.note || recharge.Note}</p></div></div>` : ''}
+                    </div>
+                `;
             } catch (error) {
                 console.error('Error loading recharge details:', error);
                 content.innerHTML = '<div class="alert alert-danger">Errore di connessione</div>';
@@ -361,10 +498,10 @@
         }
 
         function showEcoInfo() {
-            app.showAlert('I punti eco vengono assegnati quando usi mezzi elettrici. Più usi mezzi ecologici, più punti guadagni!', 'info');
+            showAlert('I punti eco vengono assegnati quando usi mezzi elettrici. Più usi mezzi ecologici, più punti guadagni!', 'info');
         }
     </script>
-    
+
     <style>
         .balance-amount {
             font-size: 2rem;

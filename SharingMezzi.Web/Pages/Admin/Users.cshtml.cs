@@ -6,7 +6,7 @@ using SharingMezzi.Web.Services;
 
 namespace SharingMezzi.Web.Pages.Admin
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Amministratore")]
     public class UsersModel : PageModel
     {
         private readonly IUserService _userService;

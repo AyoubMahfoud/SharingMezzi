@@ -189,7 +189,8 @@ namespace SharingMezzi.Web.Models
 
     public enum UserRole
     {
-        User = 0,
+        Utente = 0,        // Aggiunto per corrispondenza con API
+        User = 0,          // Alias
         Admin = 1,
         Amministratore = 1  // Alias per Admin per compatibilità con backend
     }

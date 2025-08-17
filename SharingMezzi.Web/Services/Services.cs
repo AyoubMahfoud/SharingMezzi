@@ -95,71 +95,8 @@ namespace SharingMezzi.Web.Services
         }
     }
 
-    public class ParkingService : IParkingService
-    {
-        private readonly IApiService _apiService;
-        private readonly IAuthService _authService;
-
-        public ParkingService(IApiService apiService, IAuthService authService)
-        {
-            _apiService = apiService;
-            _authService = authService;
-        }
-
-        public async Task<List<Parking>> GetParkingsAsync()
-        {
-            try
-            {
-                // Prima prova con endpoint pubblico
-                var parkings = await _apiService.GetAsync<List<Parking>>("/api/public/parcheggi");
-                if (parkings != null && parkings.Count > 0)
-                {
-                    return parkings;
-                }
-
-                // Se l'endpoint pubblico non funziona, prova con quello autenticato
-                var token = _authService.GetToken();
-                parkings = await _apiService.GetAsync<List<Parking>>("/api/parcheggi", token);
-                return parkings ?? new List<Parking>();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Errore nel caricamento parcheggi: {ex.Message}");
-                return new List<Parking>();
-            }
-        }
-
-        public async Task<Parking?> GetParkingAsync(int id)
-        {
-            var token = _authService.GetToken();
-            return await _apiService.GetAsync<Parking>($"/api/parcheggi/{id}", token);
-        }
-
-        public async Task<List<Slot>> GetParkingSlotsAsync(int parkingId)
-        {
-            var token = _authService.GetToken();
-            var slots = await _apiService.GetAsync<List<Slot>>($"/api/parcheggi/{parkingId}/slots", token);
-            return slots ?? new List<Slot>();
-        }
-
-        public async Task<bool> ReserveParkingSlotAsync(int slotId)
-        {
-            var token = _authService.GetToken();
-            var response = await _apiService.PostAsync<object>($"/api/slots/{slotId}/prenota", new { }, token);
-            return response != null;
-        }
-
-        // ===== METODI ALIAS PER COMPATIBILITÀ =====
-        public async Task<List<Parking>> GetAllParkingsAsync()
-        {
-            return await GetParkingsAsync();
-        }
-
-        public async Task<Parking?> GetParkingByIdAsync(int id)
-        {
-            return await GetParkingAsync(id);
-        }
-    }
+    // ParkingService implementation intentionally kept in ParkingService.cs
+    // Duplicate trimmed to avoid type/interface redefinition conflicts.
 
     public class UserService : IUserService
     {
@@ -267,14 +204,35 @@ namespace SharingMezzi.Web.Services
         public async Task<List<Recharge>> GetUserRechargesAsync(int userId)
         {
             var token = _authService.GetToken();
-            var recharges = await _apiService.GetAsync<List<Recharge>>($"/api/utenti/{userId}/ricariche", token);
+            // API exposes user recharges under /api/user/{userId}/ricariche
+            var recharges = await _apiService.GetAsync<List<Recharge>>($"/api/user/{userId}/ricariche", token);
             return recharges ?? new List<Recharge>();
         }
 
         public async Task<bool> CreateRechargeAsync(RechargeRequest request)
         {
             var token = _authService.GetToken();
-            var response = await _apiService.PostAsync<object>("/api/ricariche", request, token);
+            // Backend expects ricarica credito on UserController: POST /api/user/ricarica-credito
+            // Obtain current user id from profile endpoint (the API requires UtenteId in the payload)
+            int userId = 0;
+            try
+            {
+                var profile = await _apiService.GetAsync<User>("/api/user/profile", token);
+                userId = profile?.Id ?? 0;
+            }
+            catch
+            {
+                // ignore - userId will remain 0 and API will return NotFound
+            }
+
+            var payload = new
+            {
+                UtenteId = userId,
+                Importo = request.Importo,
+                MetodoPagamento = request.MetodoPagamento.ToString()
+            };
+
+            var response = await _apiService.PostAsync<object>("/api/user/ricarica-credito", payload, token);
             return response != null;
         }
 
@@ -295,8 +253,16 @@ namespace SharingMezzi.Web.Services
         public async Task<decimal> GetUserBalanceAsync(int userId)
         {
             var token = _authService.GetToken();
-            var response = await _apiService.GetAsync<decimal>($"/api/utenti/{userId}/saldo", token);
-            return response;
+            // There is no dedicated /saldo endpoint in the API; use profile or statistics to get current credit
+            try
+            {
+                var profile = await _apiService.GetAsync<User>("/api/user/profile", token);
+                return profile?.Credito ?? 0m;
+            }
+            catch
+            {
+                return 0m;
+            }
         }
 
         // ===== METODI AGGIUNTIVI PER COMPATIBILITÀ =====

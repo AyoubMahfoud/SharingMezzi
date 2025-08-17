@@ -2,11 +2,10 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace SharingMezzi.Web.Pages
 {
-    public class HelloWorldModel : PageModel
+    public class AccessDeniedModel : PageModel
     {
         public void OnGet()
         {
-            // Pagina di test semplice
         }
     }
 }
