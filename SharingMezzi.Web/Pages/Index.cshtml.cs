@@ -36,16 +36,16 @@ namespace SharingMezzi.Web.Pages
         public int CompletedTrips { get; set; } = 0;
 
         [Display(Name = "Crescita Mezzi")]
-        public decimal VehicleGrowth { get; set; } = 12.5m;
+        public decimal VehicleGrowth { get; set; } = 0;
 
         [Display(Name = "Crescita Utenti")]
-        public decimal UserGrowth { get; set; } = 8.3m;
+        public decimal UserGrowth { get; set; } = 0;
 
         [Display(Name = "Crescita Stazioni")]
-        public decimal StationGrowth { get; set; } = 5.2m;
+        public decimal StationGrowth { get; set; } = 0;
 
         [Display(Name = "Crescita CO₂")]
-        public decimal Co2Growth { get; set; } = 25.7m;
+        public decimal Co2Growth { get; set; } = 0;
 
         public bool IsDataLoaded { get; set; } = false;
         public string ErrorMessage { get; set; } = string.Empty;
@@ -67,7 +67,8 @@ namespace SharingMezzi.Web.Pages
                     LoadVehicleStatistics(),
                     LoadParkingStatistics(),
                     LoadTripStatistics(),
-                    LoadSystemStatus()
+                    LoadSystemStatus(),
+                    LoadGrowthStatistics() // Aggiunto il caricamento delle statistiche di crescita
                 };
 
                 await Task.WhenAll(tasks);
@@ -256,21 +257,65 @@ namespace SharingMezzi.Web.Pages
         }
 
         /// <summary>
+        /// Carica statistiche di crescita pubbliche
+        /// </summary>
+        private async Task LoadGrowthStatistics()
+        {
+            try
+            {
+                _logger.LogInformation("📈 Caricamento statistiche di crescita...");
+                DebugMessages.Add("Caricando statistiche di crescita...");
+
+                var response = await new HttpClient().GetFromJsonAsync<dynamic>("http://localhost:5000/api/public/growth-stats");
+                
+                if (response != null)
+                {
+                    VehicleGrowth = response.VehicleGrowth ?? 0;
+                    UserGrowth = response.UserGrowth ?? 0;
+                    StationGrowth = response.StationGrowth ?? 0;
+                    Co2Growth = response.RevenueGrowth ?? 0; // Usiamo RevenueGrowth come proxy per CO2
+                    
+                    _logger.LogInformation($"✅ Statistiche di crescita caricate: Veicoli {VehicleGrowth}%, Utenti {UserGrowth}%");
+                    DebugMessages.Add($"✅ Crescita: Veicoli {VehicleGrowth}%, Utenti {UserGrowth}%");
+                }
+                else
+                {
+                    DebugMessages.Add("❌ Nessuna statistica di crescita disponibile");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Errore nel caricamento statistiche di crescita");
+                DebugMessages.Add($"❌ Errore crescita: {ex.Message}");
+                
+                // Imposta valori di default
+                VehicleGrowth = 0;
+                UserGrowth = 0;
+                StationGrowth = 0;
+                Co2Growth = 0;
+            }
+        }
+
+        /// <summary>
         /// Dati di fallback se le API non rispondono
         /// </summary>
         private void LoadFallbackData()
         {
             _logger.LogWarning("🔄 Caricamento dati di fallback");
 
-            AvailableVehicles = 125;
-            ActiveUsers = 15000;
-            ActiveStations = 50;
-            Co2Saved = 2500;
-            KilometersToday = 8750;
-            CompletedTrips = 45000;
+            AvailableVehicles = 0;
+            ActiveUsers = 0;
+            ActiveStations = 0;
+            Co2Saved = 0;
+            KilometersToday = 0;
+            CompletedTrips = 0;
+            VehicleGrowth = 0;
+            UserGrowth = 0;
+            StationGrowth = 0;
+            Co2Growth = 0;
 
             IsDataLoaded = false; // Indica che sono dati demo
-            DebugMessages.Add("🔄 Dati di fallback caricati");
+            DebugMessages.Add("🔄 Dati di fallback caricati (tutti a 0)");
         }
 
         /// <summary>

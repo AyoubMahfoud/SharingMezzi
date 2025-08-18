@@ -37,6 +37,9 @@ namespace SharingMezzi.Web.Services
         Task<List<Vehicle>> GetAvailableVehiclesAsync();
         Task<bool> UnlockVehicleAsync(int vehicleId);
         Task<bool> ReportMaintenanceAsync(int vehicleId, string description);
+        Task<bool> SetMaintenanceAsync(int vehicleId);
+        Task<bool> SetAvailableAsync(int vehicleId);
+        Task<bool> DeleteVehicleAsync(int vehicleId);
     }
 
     // ===== PARKING SERVICE INTERFACE =====
@@ -62,6 +65,7 @@ namespace SharingMezzi.Web.Services
         Task<bool> UpdateUserAsync(int id, User user);
         Task<bool> SuspendUserAsync(int id, string reason);
         Task<bool> ReactivateUserAsync(int id);
+        Task<bool> DeleteUserAsync(int id);
         Task<UserStatistics?> GetUserStatisticsAsync(int userId);
     }
 

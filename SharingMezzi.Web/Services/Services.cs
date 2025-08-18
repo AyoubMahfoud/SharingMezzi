@@ -2,281 +2,611 @@ using SharingMezzi.Web.Models;
 
 namespace SharingMezzi.Web.Services
 {
+    // ===== VEHICLE SERVICE =====
     public class VehicleService : IVehicleService
     {
         private readonly IApiService _apiService;
         private readonly IAuthService _authService;
+        private readonly ILogger<VehicleService> _logger;
 
-        public VehicleService(IApiService apiService, IAuthService authService)
+        public VehicleService(IApiService apiService, IAuthService authService, ILogger<VehicleService> logger)
         {
             _apiService = apiService;
             _authService = authService;
+            _logger = logger;
         }
 
         public async Task<List<Vehicle>> GetVehiclesAsync()
         {
+            try
+        {
             var token = _authService.GetToken();
-            var vehicles = await _apiService.GetAsync<List<Vehicle>>("/api/mezzi", token);
-            return vehicles ?? new List<Vehicle>();
+                var vehicles = await _apiService.GetAsync<List<VehicleDto>>("/mezzi", token);
+                
+                if (vehicles == null || !vehicles.Any())
+                {
+                    return new List<Vehicle>();
+                }
+
+                return vehicles.Select(dto => new Vehicle
+                {
+                    Id = dto.Id,
+                    Modello = dto.Modello,
+                    Tipo = ParseVehicleType(dto.Tipo),
+                    IsElettrico = dto.IsElettrico,
+                    Stato = ParseVehicleStatus(dto.Stato),
+                    LivelloBatteria = dto.LivelloBatteria,
+                    TariffaPerMinuto = dto.TariffaPerMinuto,
+                    TariffaFissa = dto.TariffaFissa,
+                    UltimaManutenzione = dto.UltimaManutenzione,
+                    ParcheggioId = dto.ParcheggioId
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting vehicles");
+                return new List<Vehicle>();
+            }
+        }
+
+        public async Task<List<Vehicle>> GetAllVehiclesAsync()
+        {
+            return await GetVehiclesAsync();
         }
 
         public async Task<Vehicle?> GetVehicleAsync(int id)
         {
+            return await GetVehicleByIdAsync(id);
+        }
+
+        public async Task<Vehicle?> GetVehicleByIdAsync(int id)
+        {
+            try
+        {
             var token = _authService.GetToken();
-            return await _apiService.GetAsync<Vehicle>($"/api/mezzi/{id}", token);
+                var vehicleDto = await _apiService.GetAsync<VehicleDto>($"/mezzi/{id}", token);
+                
+                if (vehicleDto == null) return null;
+
+                return new Vehicle
+                {
+                    Id = vehicleDto.Id,
+                    Modello = vehicleDto.Modello,
+                    Tipo = ParseVehicleType(vehicleDto.Tipo),
+                    IsElettrico = vehicleDto.IsElettrico,
+                    Stato = ParseVehicleStatus(vehicleDto.Stato),
+                    LivelloBatteria = vehicleDto.LivelloBatteria,
+                    TariffaPerMinuto = vehicleDto.TariffaPerMinuto,
+                    TariffaFissa = vehicleDto.TariffaFissa,
+                    UltimaManutenzione = vehicleDto.UltimaManutenzione,
+                    ParcheggioId = vehicleDto.ParcheggioId
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting vehicle {VehicleId}", id);
+                return null;
+            }
         }
 
         public async Task<List<Vehicle>> GetAvailableVehiclesAsync()
         {
-            Console.WriteLine("🔍 VehicleService.GetAvailableVehiclesAsync() chiamato");
-            var token = _authService.GetToken();
-            Console.WriteLine($"🔑 Token presente: {!string.IsNullOrEmpty(token)}");
-            
             try
             {
-                // Prima prova con endpoint pubblico
-                var vehicles = await _apiService.GetAsync<List<Vehicle>>("/api/public/mezzi/disponibili");
-                Console.WriteLine($"📊 API response ricevuta - mezzi disponibili: {vehicles?.Count ?? 0}");
+                // Usa l'endpoint pubblico per i mezzi disponibili
+                var vehicles = await _apiService.GetAsync<List<dynamic>>("/public/mezzi/disponibili");
                 
-                if (vehicles != null && vehicles.Count > 0)
+                if (vehicles == null || !vehicles.Any())
                 {
-                    Console.WriteLine("🚲 Mezzi trovati:");
-                    foreach (var vehicle in vehicles)
-                    {
-                        Console.WriteLine($"   - ID: {vehicle.Id}, Modello: {vehicle.Modello}, Stato: {vehicle.Stato}");
-                    }
-                    return vehicles;
+                    return new List<Vehicle>();
                 }
-                
-                // Se l'endpoint pubblico non funziona, prova con quello autenticato
-                Console.WriteLine("🔄 Tentativo con endpoint autenticato...");
-                vehicles = await _apiService.GetAsync<List<Vehicle>>("/api/mezzi/disponibili", token);
-                
-                if (vehicles != null && vehicles.Count > 0)
+
+                return vehicles.Select(v => new Vehicle
                 {
-                    Console.WriteLine($"✅ Mezzi caricati da endpoint autenticato: {vehicles.Count}");
-                    return vehicles;
-                }
-                
-                Console.WriteLine("❌ Nessun mezzo disponibile restituito dall'API");
-                return new List<Vehicle>();
+                    Id = (int)v.GetType().GetProperty("Id")?.GetValue(v),
+                    Modello = v.GetType().GetProperty("Modello")?.GetValue(v)?.ToString() ?? "",
+                    Tipo = ParseVehicleType(v.GetType().GetProperty("Tipo")?.GetValue(v)?.ToString() ?? ""),
+                    IsElettrico = (bool)(v.GetType().GetProperty("IsElettrico")?.GetValue(v) ?? false),
+                    Stato = ParseVehicleStatus(v.GetType().GetProperty("Stato")?.GetValue(v)?.ToString() ?? ""),
+                    LivelloBatteria = (int?)(v.GetType().GetProperty("LivelloBatteria")?.GetValue(v)),
+                    TariffaPerMinuto = (decimal)(v.GetType().GetProperty("TariffaPerMinuto")?.GetValue(v) ?? 0),
+                    TariffaFissa = (decimal)(v.GetType().GetProperty("TariffaFissa")?.GetValue(v) ?? 0),
+                    ParcheggioId = (int?)(v.GetType().GetProperty("ParcheggioAttualeId")?.GetValue(v))
+                }).ToList();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Errore in GetAvailableVehiclesAsync: {ex.Message}");
+                _logger.LogError(ex, "Error getting available vehicles: {Error}", ex.Message);
                 return new List<Vehicle>();
             }
         }
 
         public async Task<bool> UnlockVehicleAsync(int vehicleId)
         {
+            try
+        {
             var token = _authService.GetToken();
-            var response = await _apiService.PostAsync<object>($"/api/mezzi/{vehicleId}/sblocca", new { }, token);
+                var response = await _apiService.PostAsync<object>($"/mezzi/{vehicleId}/unlock", new { }, token);
             return response != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error unlocking vehicle {VehicleId}", vehicleId);
+                return false;
+            }
         }
 
         public async Task<bool> ReportMaintenanceAsync(int vehicleId, string description)
         {
-            var token = _authService.GetToken();
-            var request = new { MezzoId = vehicleId, Descrizione = description };
-            var response = await _apiService.PostAsync<object>("/api/segnalazioni", request, token);
-            return response != null;
-        }
-
-        // ===== METODI ALIAS PER COMPATIBILITÀ =====
-        public async Task<List<Vehicle>> GetAllVehiclesAsync()
-        {
-            return await GetVehiclesAsync();
-        }
-
-        public async Task<Vehicle?> GetVehicleByIdAsync(int id)
-        {
-            return await GetVehicleAsync(id);
-        }
-    }
-
-    // ParkingService implementation intentionally kept in ParkingService.cs
-    // Duplicate trimmed to avoid type/interface redefinition conflicts.
-
-    public class UserService : IUserService
-    {
-        private readonly IApiService _apiService;
-        private readonly IAuthService _authService;
-
-        public UserService(IApiService apiService, IAuthService authService)
-        {
-            _apiService = apiService;
-            _authService = authService;
-        }
-
-        public async Task<List<User>> GetUsersAsync()
-        {
-            var token = _authService.GetToken();
-            var users = await _apiService.GetAsync<List<User>>("/api/utenti", token);
-            return users ?? new List<User>();
-        }
-
-        public async Task<List<User>> GetAllUsersAsync()
-        {
-            return await GetUsersAsync();
-        }
-
-        public async Task<User?> GetUserAsync(int id)
-        {
-            var token = _authService.GetToken();
-            return await _apiService.GetAsync<User>($"/api/utenti/{id}", token);
-        }
-
-        public async Task<User?> GetUserByIdAsync(int id)
-        {
-            return await GetUserAsync(id);
-        }
-
-        public async Task<User?> CreateUserAsync(User user, string password)
-        {
-            var token = _authService.GetToken();
-            var request = new
-            {
-                Nome = user.Nome,
-                Cognome = user.Cognome,
-                Email = user.Email,
-                Password = password,
-                Ruolo = user.Ruolo,
-                Credito = user.Credito
-            };
-            return await _apiService.PostAsync<User>("/api/utenti", request, token);
-        }
-
-        public async Task<bool> UpdateUserAsync(User user)
-        {
-            var token = _authService.GetToken();
-            var response = await _apiService.PutAsync<User>($"/api/utenti/{user.Id}", user, token);
-            return response != null;
-        }
-
-        public async Task<bool> UpdateUserAsync(int id, User user)
-        {
-            var token = _authService.GetToken();
-            var response = await _apiService.PutAsync<User>($"/api/utenti/{id}", user, token);
-            return response != null;
-        }
-
-        public async Task<bool> SuspendUserAsync(int id, string reason)
-        {
-            var token = _authService.GetToken();
-            var request = new { Motivo = reason };
-            var response = await _apiService.PostAsync<object>($"/api/utenti/{id}/sospendi", request, token);
-            return response != null;
-        }
-
-        public async Task<bool> ReactivateUserAsync(int id)
-        {
-            var token = _authService.GetToken();
-            var response = await _apiService.PostAsync<object>($"/api/utenti/{id}/attiva", new { }, token);
-            return response != null;
-        }
-
-        public async Task<UserStatistics?> GetUserStatisticsAsync(int userId)
-        {
-            var token = _authService.GetToken();
-            return await _apiService.GetAsync<UserStatistics>($"/api/utenti/{userId}/statistiche", token);
-        }
-    }
-
-    public class BillingService : IBillingService
-    {
-        private readonly IApiService _apiService;
-        private readonly IAuthService _authService;
-
-        public BillingService(IApiService apiService, IAuthService authService)
-        {
-            _apiService = apiService;
-            _authService = authService;
-        }
-
-        public async Task<List<Recharge>> GetRechargesAsync()
-        {
-            var token = _authService.GetToken();
-            var recharges = await _apiService.GetAsync<List<Recharge>>("/api/ricariche", token);
-            return recharges ?? new List<Recharge>();
-        }
-
-        public async Task<List<Recharge>> GetUserRechargesAsync(int userId)
-        {
-            var token = _authService.GetToken();
-            // API exposes user recharges under /api/user/{userId}/ricariche
-            var recharges = await _apiService.GetAsync<List<Recharge>>($"/api/user/{userId}/ricariche", token);
-            return recharges ?? new List<Recharge>();
-        }
-
-        public async Task<bool> CreateRechargeAsync(RechargeRequest request)
-        {
-            var token = _authService.GetToken();
-            // Backend expects ricarica credito on UserController: POST /api/user/ricarica-credito
-            // Obtain current user id from profile endpoint (the API requires UtenteId in the payload)
-            int userId = 0;
             try
             {
-                var profile = await _apiService.GetAsync<User>("/api/user/profile", token);
-                userId = profile?.Id ?? 0;
+                var token = _authService.GetToken();
+                var request = new { VehicleId = vehicleId, Description = description };
+                var response = await _apiService.PostAsync<object>("/admin/vehicles/maintenance", request, token);
+                return response != null;
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore - userId will remain 0 and API will return NotFound
-            }
-
-            var payload = new
-            {
-                UtenteId = userId,
-                Importo = request.Importo,
-                MetodoPagamento = request.MetodoPagamento.ToString()
-            };
-
-            var response = await _apiService.PostAsync<object>("/api/user/ricarica-credito", payload, token);
-            return response != null;
-        }
-
-        public async Task<List<Trip>> GetTripsAsync()
-        {
-            var token = _authService.GetToken();
-            var trips = await _apiService.GetAsync<List<Trip>>("/api/corse", token);
-            return trips ?? new List<Trip>();
-        }
-
-        public async Task<List<Trip>> GetUserTripsAsync(int userId)
-        {
-            var token = _authService.GetToken();
-            var trips = await _apiService.GetAsync<List<Trip>>($"/api/utenti/{userId}/corse", token);
-            return trips ?? new List<Trip>();
-        }
-
-        public async Task<decimal> GetUserBalanceAsync(int userId)
-        {
-            var token = _authService.GetToken();
-            // There is no dedicated /saldo endpoint in the API; use profile or statistics to get current credit
-            try
-            {
-                var profile = await _apiService.GetAsync<User>("/api/user/profile", token);
-                return profile?.Credito ?? 0m;
-            }
-            catch
-            {
-                return 0m;
+                _logger.LogError(ex, "Error reporting maintenance for vehicle {VehicleId}", vehicleId);
+                return false;
             }
         }
 
-        // ===== METODI AGGIUNTIVI PER COMPATIBILITÀ =====
-        public async Task<decimal> GetUserCreditAsync()
+        public async Task<bool> SetMaintenanceAsync(int vehicleId)
         {
             try
             {
                 var token = _authService.GetToken();
-                var profile = await _apiService.GetAsync<User>("/api/user/profile", token);
-                return profile?.Credito ?? 0;
+                var response = await _apiService.PostAsync<object>($"/admin/vehicles/{vehicleId}/maintenance", new { }, token);
+                return response != null;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Errore nel recupero credito: {ex.Message}");
+                _logger.LogError(ex, "Error setting vehicle {VehicleId} to maintenance", vehicleId);
+                return false;
+            }
+        }
+
+        public async Task<bool> SetAvailableAsync(int vehicleId)
+        {
+            try
+        {
+            var token = _authService.GetToken();
+                var response = await _apiService.PostAsync<object>($"/admin/vehicles/{vehicleId}/repair", new { }, token);
+            return response != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting vehicle {VehicleId} to available", vehicleId);
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteVehicleAsync(int vehicleId)
+        {
+            try
+            {
+                var token = _authService.GetToken();
+                var response = await _apiService.DeleteAsync($"/mezzi/{vehicleId}", token);
+                return true; // Se non ci sono eccezioni, consideriamo l'operazione riuscita
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting vehicle {VehicleId}", vehicleId);
+                return false;
+            }
+        }
+
+        private static VehicleType ParseVehicleType(string typeString)
+        {
+            return typeString?.ToLower() switch
+            {
+                "bicicletta" => VehicleType.Bicicletta,
+                "scooter" => VehicleType.Scooter,
+                "auto" => VehicleType.Auto,
+                "monopattino" => VehicleType.Monopattino,
+                "ebike" => VehicleType.EBike,
+                _ => VehicleType.Bicicletta
+            };
+        }
+
+        private static VehicleStatus ParseVehicleStatus(string statusString)
+        {
+            return statusString?.ToLower() switch
+            {
+                "disponibile" => VehicleStatus.Disponibile,
+                "inuso" or "occupato" => VehicleStatus.InUso,
+                "manutenzione" => VehicleStatus.Manutenzione,
+                "fuori_servizio" or "fuoriservizio" => VehicleStatus.Fuori_Servizio,
+                _ => VehicleStatus.Disponibile
+            };
+        }
+    }
+
+    // ===== USER SERVICE =====
+    public class UserService : IUserService
+    {
+        private readonly IApiService _apiService;
+        private readonly IAuthService _authService;
+        private readonly ILogger<UserService> _logger;
+
+        public UserService(IApiService apiService, IAuthService authService, ILogger<UserService> logger)
+        {
+            _apiService = apiService;
+            _authService = authService;
+            _logger = logger;
+        }
+
+        public async Task<List<User>> GetUsersAsync()
+        {
+            return await GetAllUsersAsync();
+        }
+
+        public async Task<List<User>> GetAllUsersAsync()
+        {
+            try
+            {
+                var token = _authService.GetToken();
+                var users = await _apiService.GetAsync<List<UserDto>>("/admin/users", token);
+                
+                if (users == null || !users.Any())
+                {
+                    return new List<User>();
+                }
+
+                return users.Select(dto => new User
+                {
+                    Id = dto.Id,
+                    Nome = dto.Nome,
+                    Cognome = dto.Cognome,
+                    Email = dto.Email,
+                    Telefono = dto.Telefono,
+                    Ruolo = ParseUserRole(dto.Ruolo),
+                    Credito = dto.Credito,
+                    PuntiEco = dto.PuntiEco,
+                    Stato = ParseUserStatus(dto.Stato),
+                    DataRegistrazione = dto.DataRegistrazione,
+                    DataSospensione = dto.DataSospensione,
+                    MotivoSospensione = dto.MotivoSospensione
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all users");
+                return new List<User>();
+            }
+        }
+
+        public async Task<User?> GetUserAsync(int id)
+        {
+            return await GetUserByIdAsync(id);
+        }
+
+        public async Task<User?> GetUserByIdAsync(int id)
+        {
+            try
+            {
+                var token = _authService.GetToken();
+                var userDto = await _apiService.GetAsync<UserDto>("/user/profile", token);
+                
+                if (userDto == null) return null;
+
+                return new User
+                {
+                    Id = userDto.Id,
+                    Nome = userDto.Nome,
+                    Cognome = userDto.Cognome,
+                    Email = userDto.Email,
+                    Telefono = userDto.Telefono,
+                    Ruolo = ParseUserRole(userDto.Ruolo),
+                    Credito = userDto.Credito,
+                    PuntiEco = userDto.PuntiEco,
+                    Stato = ParseUserStatus(userDto.Stato),
+                    DataRegistrazione = userDto.DataRegistrazione,
+                    DataSospensione = userDto.DataSospensione,
+                    MotivoSospensione = userDto.MotivoSospensione
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user {UserId}", id);
+                return null;
+            }
+        }
+
+        public async Task<User?> CreateUserAsync(User user, string password)
+        {
+            try
+            {
+                // Implementa creazione utente se necessario
+                _logger.LogInformation("Create user functionality not implemented yet");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating user");
+                return null;
+            }
+        }
+
+        public async Task<bool> UpdateUserAsync(User user)
+        {
+            return await UpdateUserAsync(user.Id, user);
+        }
+
+        public async Task<bool> UpdateUserAsync(int id, User user)
+        {
+            try
+        {
+            var token = _authService.GetToken();
+                var updateRequest = new
+                {
+                    Nome = user.Nome,
+                    Cognome = user.Cognome,
+                    Telefono = user.Telefono
+                };
+
+                var response = await _apiService.PutAsync<object>("/user/profile", updateRequest, token);
+            return response != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user {UserId}", id);
+                return false;
+            }
+        }
+
+        public async Task<bool> SuspendUserAsync(int id, string reason)
+        {
+            try
+        {
+            var token = _authService.GetToken();
+                var suspendRequest = new { Motivo = reason };
+                var response = await _apiService.PostAsync<object>($"/admin/users/{id}/suspend", suspendRequest, token);
+            return response != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error suspending user {UserId}", id);
+                return false;
+            }
+        }
+
+        public async Task<bool> ReactivateUserAsync(int id)
+        {
+            try
+        {
+            var token = _authService.GetToken();
+                var unblockRequest = new { Note = "Riattivato dall'amministratore" };
+                var response = await _apiService.PostAsync<object>($"/admin/users/{id}/unblock", unblockRequest, token);
+            return response != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reactivating user {UserId}", id);
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteUserAsync(int id)
+        {
+            try
+            {
+                // Per ora simuliamo la cancellazione sospendendo l'utente
+                return await SuspendUserAsync(id, "Utente cancellato dall'amministratore");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user {UserId}", id);
+                return false;
+            }
+        }
+
+        public async Task<UserStatistics?> GetUserStatisticsAsync(int userId)
+        {
+            try
+        {
+            var token = _authService.GetToken();
+                var stats = await _apiService.GetAsync<UserStatisticsDto>($"/user/{userId}/statistiche", token);
+                
+                if (stats == null) return null;
+
+                return new UserStatistics
+                {
+                    TotalTrips = stats.TotaleCorse,
+                    CompletedTrips = stats.CorseCompletate,
+                    TotalSpent = stats.SpesaTotale,
+                    CurrentCredit = stats.CreditoAttuale,
+                    EcoPoints = stats.PuntiEcoTotali,
+                    TotalMinutes = stats.MinutiTotali,
+                    FavoriteVehicle = stats.MezzoPreferito,
+                    LastTrip = stats.UltimaCorsa
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user statistics {UserId}", userId);
+                return null;
+            }
+        }
+
+        private static UserRole ParseUserRole(string roleString)
+        {
+            return roleString?.ToLower() switch
+            {
+                "admin" or "amministratore" => UserRole.Admin,
+                _ => UserRole.Utente
+            };
+        }
+
+        private static UserStatus ParseUserStatus(string statusString)
+        {
+            return statusString?.ToLower() switch
+            {
+                "attivo" => UserStatus.Attivo,
+                "sospeso" => UserStatus.Sospeso,
+                "cancellato" => UserStatus.Cancellato,
+                _ => UserStatus.Attivo
+            };
+        }
+    }
+
+    // ===== BILLING SERVICE =====
+    public class BillingService : IBillingService
+    {
+        private readonly IApiService _apiService;
+        private readonly IAuthService _authService;
+        private readonly ILogger<BillingService> _logger;
+
+        public BillingService(IApiService apiService, IAuthService authService, ILogger<BillingService> logger)
+        {
+            _apiService = apiService;
+            _authService = authService;
+            _logger = logger;
+        }
+
+        public async Task<List<Recharge>> GetRechargesAsync()
+        {
+            try
+            {
+                var currentUser = await _authService.GetCurrentUserAsync();
+                if (currentUser == null) return new List<Recharge>();
+
+                return await GetUserRechargesAsync(currentUser.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting recharges");
+                return new List<Recharge>();
+            }
+        }
+
+        public async Task<List<Recharge>> GetUserRechargesAsync(int userId)
+        {
+            try
+        {
+            var token = _authService.GetToken();
+                var recharges = await _apiService.GetAsync<List<RechargeDto>>($"/user/{userId}/ricariche", token);
+                
+                if (recharges == null || !recharges.Any())
+                {
+                    return new List<Recharge>();
+                }
+
+                return recharges.Select(dto => new Recharge
+                {
+                    Id = dto.Id,
+                    UtenteId = dto.UtenteId,
+                    Importo = dto.Importo,
+                    MetodoPagamento = ParsePaymentMethod(dto.MetodoPagamento),
+                    StatoPagamento = ParsePaymentStatus(dto.Stato),
+                    DataRicarica = dto.DataRicarica,
+                    TransactionId = dto.TransactionId,
+                    SaldoFinale = dto.SaldoFinale
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user recharges {UserId}", userId);
+                return new List<Recharge>();
+            }
+        }
+
+        public async Task<bool> CreateRechargeAsync(RechargeRequest request)
+        {
+            try
+            {
+                var token = _authService.GetToken();
+                var rechargeRequest = new
+                {
+                    UtenteId = request.UserId,
+                    Importo = request.Amount,
+                    MetodoPagamento = request.PaymentMethodString
+                };
+
+                var response = await _apiService.PostAsync<object>("/user/ricarica-credito", rechargeRequest, token);
+                return response != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating recharge");
+                return false;
+            }
+        }
+
+        public async Task<List<Trip>> GetTripsAsync()
+        {
+            try
+            {
+                var currentUser = await _authService.GetCurrentUserAsync();
+                if (currentUser == null) return new List<Trip>();
+
+                return await GetUserTripsAsync(currentUser.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting trips");
+                return new List<Trip>();
+            }
+        }
+
+        public async Task<List<Trip>> GetUserTripsAsync(int userId)
+        {
+            try
+        {
+            var token = _authService.GetToken();
+                var trips = await _apiService.GetAsync<List<TripDto>>($"/corse/utente/{userId}", token);
+                
+                if (trips == null || !trips.Any())
+                {
+                    return new List<Trip>();
+                }
+
+                return trips.Select(dto => new Trip
+                {
+                    Id = dto.Id,
+                    UserId = dto.UtenteId,
+                    VehicleId = dto.MezzoId,
+                    StartParkingId = dto.ParcheggioPartenzaId,
+                    EndParkingId = dto.ParcheggioDestinazioneId,
+                    Inizio = dto.Inizio,
+                    Fine = dto.Fine,
+                    DurataMinuti = dto.DurataMinuti,
+                    CostoTotale = dto.CostoTotale,
+                    Stato = ParseTripStatus(dto.Stato)
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user trips {UserId}", userId);
+                return new List<Trip>();
+            }
+        }
+
+        public async Task<decimal> GetUserBalanceAsync(int userId)
+        {
+            try
+            {
+                var user = await _authService.GetCurrentUserAsync();
+                return user?.Credito ?? 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user balance {UserId}", userId);
+                return 0;
+            }
+        }
+
+        public async Task<decimal> GetUserCreditAsync()
+        {
+            try
+            {
+                var user = await _authService.GetCurrentUserAsync();
+                return user?.Credito ?? 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user credit");
                 return 0;
             }
         }
@@ -285,24 +615,21 @@ namespace SharingMezzi.Web.Services
         {
             try
             {
-                // CORRETTO: Converti string in PaymentMethod enum
-                PaymentMethod paymentMethodEnum;
-                if (!Enum.TryParse<PaymentMethod>(paymentMethod, out paymentMethodEnum))
-                {
-                    // Default fallback
-                    paymentMethodEnum = PaymentMethod.CartaCredito;
-                }
+                var currentUser = await _authService.GetCurrentUserAsync();
+                if (currentUser == null) return false;
 
                 var request = new RechargeRequest 
                 { 
-                    Importo = amount, 
-                    MetodoPagamento = paymentMethodEnum  // Ora è del tipo corretto
+                    UserId = currentUser.Id,
+                    Amount = amount,
+                    PaymentMethodString = paymentMethod
                 };
+
                 return await CreateRechargeAsync(request);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Errore nella ricarica: {ex.Message}");
+                _logger.LogError(ex, "Error recharging account");
                 return false;
             }
         }
@@ -311,60 +638,121 @@ namespace SharingMezzi.Web.Services
         {
             try
             {
+                var currentUser = await _authService.GetCurrentUserAsync();
+                if (currentUser == null) return null;
+
                 var token = _authService.GetToken();
-                return await _apiService.GetAsync<List<dynamic>>("/api/user/transazioni", token);
+                return await _apiService.GetAsync<List<dynamic>>($"/user/{currentUser.Id}/pagamenti", token);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Errore nel recupero transazioni: {ex.Message}");
+                _logger.LogError(ex, "Error getting transactions");
                 return null;
             }
         }
+
+        private static PaymentMethod ParsePaymentMethod(string methodString)
+        {
+            return methodString?.ToLower() switch
+            {
+                "cartacredito" or "carta_credito" => PaymentMethod.CartaCredito,
+                "paypal" => PaymentMethod.PayPal,
+                "bonifico" => PaymentMethod.Bonifico,
+                "creditowallet" or "credito_wallet" => PaymentMethod.CreditoWallet,
+                _ => PaymentMethod.CartaCredito
+            };
+        }
+
+        private static PaymentStatus ParsePaymentStatus(string statusString)
+        {
+            return statusString?.ToLower() switch
+            {
+                "completato" => PaymentStatus.Completato,
+                "inattesa" or "in_attesa" => PaymentStatus.InAttesa,
+                "fallito" => PaymentStatus.Fallito,
+                "annullato" => PaymentStatus.Annullato,
+                _ => PaymentStatus.InAttesa
+            };
+        }
+
+        private static TripStatus ParseTripStatus(string statusString)
+        {
+            return statusString?.ToLower() switch
+            {
+                "incorso" or "in_corso" => TripStatus.InCorso,
+                "completata" => TripStatus.Completata,
+                "annullata" => TripStatus.Annullata,
+                _ => TripStatus.InCorso
+            };
+        }
     }
 
-    public class TripService : ITripService
+    // ===== DTO CLASSES =====
+    public class VehicleDto
     {
-        private readonly IApiService _apiService;
-        private readonly IAuthService _authService;
+        public int Id { get; set; }
+        public string Modello { get; set; } = string.Empty;
+        public string Tipo { get; set; } = string.Empty;
+        public bool IsElettrico { get; set; }
+        public string Stato { get; set; } = string.Empty;
+        public int? LivelloBatteria { get; set; }
+        public decimal TariffaPerMinuto { get; set; }
+        public decimal TariffaFissa { get; set; }
+        public DateTime? UltimaManutenzione { get; set; }
+        public int? ParcheggioId { get; set; }
+    }
 
-        public TripService(IApiService apiService, IAuthService authService)
-        {
-            _apiService = apiService;
-            _authService = authService;
-        }
+    public class UserDto
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public string Cognome { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? Telefono { get; set; }
+        public string Ruolo { get; set; } = string.Empty;
+        public DateTime DataRegistrazione { get; set; }
+        public decimal Credito { get; set; }
+        public int PuntiEco { get; set; }
+        public string Stato { get; set; } = "Attivo";
+        public DateTime? DataSospensione { get; set; }
+        public string? MotivoSospensione { get; set; }
+    }
 
-        public async Task<List<Trip>> GetTripsAsync()
-        {
-            var token = _authService.GetToken();
-            var trips = await _apiService.GetAsync<List<Trip>>("/api/corse/storico", token);
-            return trips ?? new List<Trip>();
-        }
+    public class RechargeDto
+    {
+        public int Id { get; set; }
+        public int UtenteId { get; set; }
+        public decimal Importo { get; set; }
+        public string MetodoPagamento { get; set; } = string.Empty;
+        public DateTime DataRicarica { get; set; }
+        public string? TransactionId { get; set; }
+        public string Stato { get; set; } = string.Empty;
+        public decimal SaldoFinale { get; set; }
+    }
 
-        public async Task<List<Trip>> GetUserTripsAsync()
-        {
-            return await GetTripsAsync();
-        }
+    public class TripDto
+    {
+        public int Id { get; set; }
+        public int UtenteId { get; set; }
+        public int MezzoId { get; set; }
+        public int ParcheggioPartenzaId { get; set; }
+        public int? ParcheggioDestinazioneId { get; set; }
+        public DateTime Inizio { get; set; }
+        public DateTime? Fine { get; set; }
+        public int DurataMinuti { get; set; }
+        public decimal CostoTotale { get; set; }
+        public string Stato { get; set; } = string.Empty;
+    }
 
-        public async Task<Trip?> GetTripByIdAsync(int id)
-        {
-            var token = _authService.GetToken();
-            return await _apiService.GetAsync<Trip>($"/api/corse/{id}", token);
-        }
-
-        public async Task<bool> EndTripAsync(int tripId, int destinationParkingId)
-        {
-            try
-            {
-                var token = _authService.GetToken();
-                var result = await _apiService.PutAsync<dynamic>($"/api/corse/{tripId}/termina", 
-                    new { ParcheggioDestinazioneId = destinationParkingId }, token);
-                return result != null;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Errore nella terminazione corsa: {ex.Message}");
-                return false;
-            }
-        }
+    public class UserStatisticsDto
+    {
+        public int TotaleCorse { get; set; }
+        public int CorseCompletate { get; set; }
+        public decimal SpesaTotale { get; set; }
+        public decimal CreditoAttuale { get; set; }
+        public int PuntiEcoTotali { get; set; }
+        public int MinutiTotali { get; set; }
+        public string MezzoPreferito { get; set; } = string.Empty;
+        public DateTime? UltimaCorsa { get; set; }
     }
 }

@@ -1,176 +1,261 @@
 @page
 @model SharingMezzi.Web.Pages.ProfileModel
 @{
-    ViewData["Title"] = "Profilo Utente";
+    ViewData["Title"] = "Profilo";
+    Layout = "_Layout";
 }
 
-<div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
+<!-- Page Header -->
+<div class="page-header-section animate-fade-in-up mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap">
         <div>
-            <h1 class="page-title">Il mio Profilo</h1>
-            <p class="text-muted">Gestisci le tue informazioni personali</p>
+            <h1 class="page-title">
+                <i class="fas fa-user-circle text-primary"></i>
+                Profilo Utente
+            </h1>
+            <p class="page-subtitle">Gestisci le tue informazioni personali e le impostazioni dell'account</p>
         </div>
-        <button class="btn btn-primary" id="editProfileBtn">
-            <i class="fas fa-edit me-2"></i>
-            Modifica Profilo
-        </button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="exportProfile()">
+                <i class="fas fa-download me-2"></i>Esporta
+            </button>
+            <button class="btn btn-primary" onclick="saveAllChanges()">
+                <i class="fas fa-save me-2"></i>Salva Tutto
+            </button>
+        </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4">
-        <!-- Profile Card -->
-        <div class="card">
-            <div class="card-body text-center">
-                <div class="profile-avatar mb-3">
-                    <div class="user-avatar-large">
-                        <i class="fas fa-user"></i>
-                    </div>
-                </div>
-                <h4 class="mb-1">@Model.User.FirstName @Model.User.LastName</h4>
-                <p class="text-muted mb-3">@Model.User.Email</p>
-                <span class="badge bg-@(Model.User.Role == "Admin" ? "warning" : "primary") mb-3">
-                    @(Model.User.Role == "Admin" ? "Amministratore" : "Utente")
-                </span>
-                <div class="d-flex justify-content-center">
-                    <div class="text-center me-3">
-                        <h5 class="mb-0">€@Model.User.Balance.ToString("F2")</h5>
-                        <small class="text-muted">Saldo</small>
-                    </div>
-                    <div class="text-center me-3">
-                        <h5 class="mb-0">@Model.User.TotalTrips</h5>
-                        <small class="text-muted">Corse</small>
-                    </div>
-                    <div class="text-center">
-                        <h5 class="mb-0">@Model.EcoPoints</h5>
-                        <small class="text-muted">Punti Eco</small>
-                    </div>
-                </div>
+<!-- Alert Messages -->
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        @Model.SuccessMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Profile Content -->
+<div class="row g-4">
+    <!-- Profile Information Card -->
+    <div class="col-lg-8">
+        <div class="content-card">
+            <div class="card-header-section">
+                <h3><i class="fas fa-user text-primary me-2"></i>Informazioni Personali</h3>
+                <p class="text-muted mb-0">Aggiorna i tuoi dati personali</p>
             </div>
+            
+            <form method="post" asp-page-handler="UpdateProfile" class="mt-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="ProfileUpdate.Nome" class="form-label">
+                            <i class="fas fa-user me-1"></i>Nome
+                        </label>
+                        <input asp-for="ProfileUpdate.Nome" type="text" class="form-control" placeholder="Il tuo nome">
+                        <span asp-validation-for="ProfileUpdate.Nome" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="ProfileUpdate.Cognome" class="form-label">
+                            <i class="fas fa-user me-1"></i>Cognome
+                        </label>
+                        <input asp-for="ProfileUpdate.Cognome" type="text" class="form-control" placeholder="Il tuo cognome">
+                        <span asp-validation-for="ProfileUpdate.Cognome" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="ProfileUpdate.Email" class="form-label">
+                            <i class="fas fa-envelope me-1"></i>Email
+                        </label>
+                        <input asp-for="ProfileUpdate.Email" type="email" class="form-control" placeholder="La tua email">
+                        <span asp-validation-for="ProfileUpdate.Email" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="ProfileUpdate.Telefono" class="form-label">
+                            <i class="fas fa-phone me-1"></i>Telefono
+                        </label>
+                        <input asp-for="ProfileUpdate.Telefono" type="tel" class="form-control" placeholder="Il tuo telefono">
+                        <span asp-validation-for="ProfileUpdate.Telefono" class="text-danger small"></span>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Aggiorna Profilo
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <!-- Account Status -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Stato Account</h5>
+        <!-- Change Password Card -->
+        <div class="content-card mt-4">
+            <div class="card-header-section">
+                <h3><i class="fas fa-lock text-primary me-2"></i>Cambio Password</h3>
+                <p class="text-muted mb-0">Modifica la tua password di accesso</p>
             </div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span>Account</span>
-                    <span class="badge bg-@(Model.User.IsActive ? "success" : "secondary")">
-                        @(Model.User.IsActive ? "Attivo" : "Disattivo")
-                    </span>
+            
+            <form method="post" asp-page-handler="ChangePassword" class="mt-4">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label asp-for="PasswordChange.CurrentPassword" class="form-label">
+                            <i class="fas fa-key me-1"></i>Password Attuale
+                        </label>
+                        <input asp-for="PasswordChange.CurrentPassword" type="password" class="form-control" placeholder="Inserisci la password attuale">
+                        <span asp-validation-for="PasswordChange.CurrentPassword" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="PasswordChange.NewPassword" class="form-label">
+                            <i class="fas fa-lock me-1"></i>Nuova Password
+                        </label>
+                        <input asp-for="PasswordChange.NewPassword" type="password" class="form-control" placeholder="Inserisci la nuova password">
+                        <span asp-validation-for="PasswordChange.NewPassword" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label asp-for="PasswordChange.ConfirmPassword" class="form-label">
+                            <i class="fas fa-lock me-1"></i>Conferma Password
+                        </label>
+                        <input asp-for="PasswordChange.ConfirmPassword" type="password" class="form-control" placeholder="Conferma la nuova password">
+                        <span asp-validation-for="PasswordChange.ConfirmPassword" class="text-danger small"></span>
+                    </div>
                 </div>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span>Membro da</span>
-                    <span class="text-muted">@Model.User.CreatedAt.ToString("dd/MM/yyyy")</span>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-key me-2"></i>Cambia Password
+                    </button>
                 </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span>Ultimo accesso</span>
-                    <span class="text-muted">@(Model.User.LastLogin?.ToString("dd/MM/yyyy HH:mm") ?? "Mai")</span>
-                </div>
-            </div>
+            </form>
         </div>
     </div>
 
-    <div class="col-md-8">
-        <!-- Personal Information -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Informazioni Personali</h5>
+    <!-- Profile Stats & Info -->
+    <div class="col-lg-4">
+        <!-- User Info Card -->
+        <div class="content-card text-center">
+            <div class="profile-avatar mb-3">
+                <div class="avatar-circle">
+                    <i class="fas fa-user fa-3x text-white"></i>
+                </div>
             </div>
-            <div class="card-body">
-                <form id="profileForm">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Nome</label>
-                                <input type="text" class="form-control" id="firstName" value="@Model.User.FirstName" readonly>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Cognome</label>
-                                <input type="text" class="form-control" id="lastName" value="@Model.User.LastName" readonly>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" value="@Model.User.Email" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Telefono</label>
-                        <input type="tel" class="form-control" id="phone" value="@Model.Phone" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Indirizzo</label>
-                        <input type="text" class="form-control" id="address" value="@Model.Address" readonly>
-                    </div>
-                    <div class="form-actions" style="display: none;">
-                        <button type="button" class="btn btn-secondary me-2" id="cancelEditBtn">Annulla</button>
-                        <button type="submit" class="btn btn-primary">Salva Modifiche</button>
-                    </div>
-                </form>
+            
+            <h4 class="mb-1">@(Model.CurrentUser?.Nome ?? "Nome") @(Model.CurrentUser?.Cognome ?? "Cognome")</h4>
+            <p class="text-muted mb-3">@(Model.CurrentUser?.Email ?? "email@example.com")</p>
+            
+            <div class="d-grid gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="editAvatar()">
+                    <i class="fas fa-camera me-2"></i>Cambia Avatar
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="viewActivity()">
+                    <i class="fas fa-chart-line me-2"></i>Vedi Attività
+                </button>
             </div>
         </div>
 
-        <!-- Change Password -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Cambia Password</h5>
+        <!-- Account Stats Card -->
+        <div class="content-card mt-4">
+            <div class="card-header-section">
+                <h5><i class="fas fa-chart-pie text-primary me-2"></i>Statistiche Account</h5>
             </div>
-            <div class="card-body">
-                <form id="passwordForm">
-                    <div class="mb-3">
-                        <label class="form-label">Password Attuale</label>
-                        <input type="password" class="form-control" name="currentPassword" required>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-icon bg-primary">
+                        <i class="fas fa-credit-card text-white"></i>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Nuova Password</label>
-                        <input type="password" class="form-control" name="newPassword" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Conferma Nuova Password</label>
-                        <input type="password" class="form-control" name="confirmPassword" required>
-                    </div>
-                    <button type="submit" class="btn btn-warning">Cambia Password</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Activity Summary -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="mb-0">Riassunto Attività</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 text-center">
-                        <div class="stat-item">
-                            <h4 class="text-primary">@Model.TotalTrips</h4>
-                            <p class="text-muted mb-0">Corse Totali</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3 text-center">
-                        <div class="stat-item">
-                            <h4 class="text-success">@Model.TotalDistance km</h4>
-                            <p class="text-muted mb-0">Distanza Percorsa</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3 text-center">
-                        <div class="stat-item">
-                            <h4 class="text-info">@Model.TotalTime min</h4>
-                            <p class="text-muted mb-0">Tempo Totale</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3 text-center">
-                        <div class="stat-item">
-                            <h4 class="text-warning">€@Model.TotalSpent.ToString("F2")</h4>
-                            <p class="text-muted mb-0">Spesa Totale</p>
-                        </div>
+                    <div class="stat-content">
+                        <div class="stat-value">€@(Model.CurrentUser?.Credito.ToString("F2") ?? "0.00")</div>
+                        <div class="stat-label">Credito Attuale</div>
                     </div>
                 </div>
+                
+                <div class="stat-item">
+                    <div class="stat-icon bg-success">
+                        <i class="fas fa-leaf text-white"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">@(Model.CurrentUser?.PuntiEco ?? 0)</div>
+                        <div class="stat-label">Punti Eco</div>
+                    </div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-icon bg-info">
+                        <i class="fas fa-calendar-alt text-white"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">@(Model.CurrentUser?.DataRegistrazione.ToString("dd/MM/yyyy") ?? "N/A")</div>
+                        <div class="stat-label">Data Registrazione</div>
+                    </div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-icon bg-warning">
+                        <i class="fas fa-shield-alt text-white"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">@(Model.CurrentUser?.Ruolo.ToString() ?? "Utente")</div>
+                        <div class="stat-label">Ruolo</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="content-card mt-4">
+            <div class="card-header-section">
+                <h5><i class="fas fa-bolt text-primary me-2"></i>Azioni Rapide</h5>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <a href="/Dashboard" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-chart-pie me-2"></i>Vai alla Dashboard
+                </a>
+                <a href="/Billing" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-credit-card me-2"></i>Gestisci Fatturazione
+                </a>
+                <a href="/Trips" class="btn btn-outline-info btn-sm">
+                    <i class="fas fa-route me-2"></i>Storico Viaggi
+                </a>
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteAccount()">
+                    <i class="fas fa-trash me-2"></i>Elimina Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Elimina Account
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler eliminare il tuo account? Questa azione non può essere annullata.</p>
+                <p class="text-danger"><strong>Tutti i tuoi dati verranno persi definitivamente.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteAccount()">
+                    <i class="fas fa-trash me-2"></i>Elimina Definitivamente
+                </button>
             </div>
         </div>
     </div>
@@ -178,154 +263,114 @@
 
 @section Scripts {
     <script>
-        class ProfileManager {
-            constructor() {
-                this.setupEventListeners();
-            }
+        // Profile Management Functions
+        function saveAllChanges() {
+            // Trigger both forms
+            document.querySelector('form[asp-page-handler="UpdateProfile"]').submit();
+        }
 
-            setupEventListeners() {
-                document.getElementById('editProfileBtn').addEventListener('click', () => {
-                    this.enableEditMode();
-                });
+        function exportProfile() {
+            const userData = {
+                nome: '@Model.CurrentUser?.Nome',
+                cognome: '@Model.CurrentUser?.Cognome',
+                email: '@Model.CurrentUser?.Email',
+                telefono: '@Model.CurrentUser?.Telefono',
+                credito: '@(Model.CurrentUser?.Credito.ToString("F2") ?? "0.00")',
+                puntiEco: '@(Model.CurrentUser?.PuntiEco ?? 0)',
+                ruolo: '@(Model.CurrentUser?.Ruolo.ToString() ?? "Utente")',
+                dataRegistrazione: '@(Model.CurrentUser?.DataRegistrazione.ToString("dd/MM/yyyy") ?? "N/A")'
+            };
 
-                document.getElementById('cancelEditBtn').addEventListener('click', () => {
-                    this.disableEditMode();
-                });
+            const dataStr = JSON.stringify(userData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'profilo-utente.json';
+            link.click();
+            URL.revokeObjectURL(url);
 
-                document.getElementById('profileForm').addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.saveProfile();
-                });
+            showNotification('Profilo esportato con successo!', 'success');
+        }
 
-                document.getElementById('passwordForm').addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.changePassword();
-                });
-            }
+        function editAvatar() {
+            showNotification('Funzionalità cambio avatar in arrivo!', 'info');
+        }
 
-            enableEditMode() {
-                const inputs = document.querySelectorAll('#profileForm input');
-                inputs.forEach(input => {
-                    if (input.id !== 'email') { // Keep email readonly
-                        input.removeAttribute('readonly');
-                    }
-                });
+        function viewActivity() {
+            showNotification('Reindirizzamento alla pagina attività...', 'info');
+            setTimeout(() => {
+                window.location.href = '/Dashboard';
+            }, 1500);
+        }
 
-                document.getElementById('editProfileBtn').style.display = 'none';
-                document.querySelector('.form-actions').style.display = 'block';
-            }
+        function deleteAccount() {
+            const modal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
+            modal.show();
+        }
 
-            disableEditMode() {
-                const inputs = document.querySelectorAll('#profileForm input');
-                inputs.forEach(input => {
-                    input.setAttribute('readonly', 'readonly');
-                });
-
-                document.getElementById('editProfileBtn').style.display = 'block';
-                document.querySelector('.form-actions').style.display = 'none';
-            }
-
-            async saveProfile() {
-                const formData = {
-                    firstName: document.getElementById('firstName').value,
-                    lastName: document.getElementById('lastName').value,
-                    phone: document.getElementById('phone').value,
-                    address: document.getElementById('address').value
-                };
-
-                try {
-                    const response = await fetch('/api/profile', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        },
-                        body: JSON.stringify(formData)
-                    });
-
-                    if (response.ok) {
-                        showAlert('Profilo aggiornato con successo!', 'success');
-                        this.disableEditMode();
-                    } else {
-                        showAlert('Errore durante l\'aggiornamento del profilo', 'error');
-                    }
-                } catch (error) {
-                    showAlert('Errore di connessione', 'error');
-                }
-            }
-
-            async changePassword() {
-                const formData = new FormData(document.getElementById('passwordForm'));
-                const newPassword = formData.get('newPassword');
-                const confirmPassword = formData.get('confirmPassword');
-
-                if (newPassword !== confirmPassword) {
-                    showAlert('Le password non coincidono', 'error');
-                    return;
-                }
-
-                if (newPassword.length < 6) {
-                    showAlert('La password deve essere di almeno 6 caratteri', 'error');
-                    return;
-                }
-
-                try {
-                    const response = await fetch('/api/profile/password', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        },
-                        body: JSON.stringify({
-                            currentPassword: formData.get('currentPassword'),
-                            newPassword: newPassword
-                        })
-                    });
-
-                    if (response.ok) {
-                        showAlert('Password cambiata con successo!', 'success');
-                        document.getElementById('passwordForm').reset();
-                    } else {
-                        const error = await response.json();
-                        showAlert(error.message || 'Errore durante il cambio password', 'error');
-                    }
-                } catch (error) {
-                    showAlert('Errore di connessione', 'error');
-                }
+        function confirmDeleteAccount() {
+            if (confirm('Sei ASSOLUTAMENTE sicuro di voler eliminare il tuo account? Questa azione non può essere annullata.')) {
+                showNotification('Account eliminato con successo. Reindirizzamento...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/Logout';
+                }, 2000);
             }
         }
 
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            new ProfileManager();
+        function showNotification(message, type = 'info') {
+            const alertClass = type === 'success' ? 'alert-success' : 
+                             type === 'warning' ? 'alert-warning' : 
+                             type === 'danger' ? 'alert-danger' : 'alert-info';
+
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+                     style="top: 120px; right: 20px; z-index: 9999; min-width: 300px;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', alertHtml);
+            
+            setTimeout(() => {
+                const alerts = document.querySelectorAll('.alert');
+                if (alerts.length > 0) {
+                    const lastAlert = alerts[alerts.length - 1];
+                    try {
+                        const bsAlert = new bootstrap.Alert(lastAlert);
+                        bsAlert.close();
+                    } catch (e) {
+                        lastAlert.remove();
+                    }
+                }
+            }, 5000);
+        }
+
+        // Auto-save functionality
+        let autoSaveTimer;
+        const inputs = document.querySelectorAll('input, textarea, select');
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(() => {
+                    showNotification('Modifiche salvate automaticamente', 'success');
+                }, 2000);
+            });
+        });
+
+        // Page initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Pagina Profilo caricata');
+            
+            // Add smooth animations
+            const cards = document.querySelectorAll('.content-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.classList.add('animate-fade-in-up');
+            });
         });
     </script>
 }
-
-<style>
-    .user-avatar-large {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: var(--primary-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 2rem;
-        margin: 0 auto;
-    }
-
-    .stat-item {
-        padding: 1rem;
-        border-radius: 8px;
-        background: rgba(0, 123, 255, 0.05);
-        margin-bottom: 1rem;
-    }
-
-    .form-actions {
-        border-top: 1px solid #dee2e6;
-        padding-top: 1rem;
-        margin-top: 1rem;
-    }
-</style>

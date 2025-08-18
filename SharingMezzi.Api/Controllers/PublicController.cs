@@ -125,6 +125,71 @@ namespace SharingMezzi.Api.Controllers
         }
 
         /// <summary>
+        /// Ottieni statistiche di crescita pubbliche
+        /// </summary>
+        [HttpGet("growth-stats")]
+        public async Task<IActionResult> GetPublicGrowthStats()
+        {
+            try
+            {
+                var now = DateTime.UtcNow;
+                var lastMonth = now.AddMonths(-1);
+
+                // Calcola crescita mezzi
+                var mezziThisMonth = await _context.Mezzi
+                    .Where(m => m.CreatedAt >= lastMonth)
+                    .CountAsync();
+                var mezziLastMonth = await _context.Mezzi
+                    .Where(m => m.CreatedAt >= lastMonth.AddMonths(-1) && m.CreatedAt < lastMonth)
+                    .CountAsync();
+                var vehicleGrowth = mezziLastMonth > 0 ? ((mezziThisMonth - mezziLastMonth) / (decimal)mezziLastMonth) * 100 : 0;
+
+                // Calcola crescita utenti
+                var usersThisMonth = await _context.Utenti
+                    .Where(u => u.DataRegistrazione >= lastMonth)
+                    .CountAsync();
+                var usersLastMonth = await _context.Utenti
+                    .Where(u => u.DataRegistrazione >= lastMonth.AddMonths(-1) && u.DataRegistrazione < lastMonth)
+                    .CountAsync();
+                var userGrowth = usersLastMonth > 0 ? ((usersThisMonth - usersLastMonth) / (decimal)usersLastMonth) * 100 : 0;
+
+                // Calcola crescita corse
+                var tripsThisMonth = await _context.Corse
+                    .Where(c => c.Inizio >= lastMonth)
+                    .CountAsync();
+                var tripsLastMonth = await _context.Corse
+                    .Where(c => c.Inizio >= lastMonth.AddMonths(-1) && c.Inizio < lastMonth)
+                    .CountAsync();
+                var tripGrowth = tripsLastMonth > 0 ? ((tripsThisMonth - tripsLastMonth) / (decimal)tripsLastMonth) * 100 : 0;
+
+                // Calcola crescita ricavi
+                var revenueThisMonth = await _context.Pagamenti
+                    .Where(p => p.DataPagamento >= lastMonth && p.Stato == StatoPagamento.Completato)
+                    .SumAsync(p => p.Importo);
+                var revenueLastMonth = await _context.Pagamenti
+                    .Where(p => p.DataPagamento >= lastMonth.AddMonths(-1) && p.DataPagamento < lastMonth && p.Stato == StatoPagamento.Completato)
+                    .SumAsync(p => p.Importo);
+                var revenueGrowth = revenueLastMonth > 0 ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100 : 0;
+
+                var stats = new {
+                    VehicleGrowth = Math.Round(vehicleGrowth, 1),
+                    UserGrowth = Math.Round(userGrowth, 1),
+                    TripGrowth = Math.Round(tripGrowth, 1),
+                    RevenueGrowth = Math.Round(revenueGrowth, 1),
+                    LastUpdated = now
+                };
+
+                _logger.LogInformation("Restituite statistiche di crescita pubbliche");
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Errore nel recupero statistiche di crescita pubbliche");
+                return StatusCode(500, "Errore interno del server");
+            }
+        }
+
+        /// <summary>
         /// Test endpoint per verificare connettività
         /// </summary>
         [HttpGet("test")]

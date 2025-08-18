@@ -1,0 +1,28 @@
+@model SharingMezzi.Web.ViewComponents.NavbarViewModel
+
+<div class="navbar-nav ms-auto">
+    @if (!Model.IsAuthenticated)
+    {
+        <div class="d-flex gap-2">
+            <a href="/Login" class="btn btn-outline-primary">
+                Accedi
+            </a>
+            <a href="/Register" class="btn btn-primary">
+                Registrati
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-user me-2"></i>@(Model.CurrentUser?.Nome ?? "Utente")
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="/Profile"><i class="fas fa-user me-2"></i>Profilo</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="/Logout"><i class="fas fa-sign-out-alt me-2"></i>Disconnetti</a></li>
+            </ul>
+        </div>
+    }
+</div>

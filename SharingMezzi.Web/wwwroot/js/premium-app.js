@@ -1,4 +1,5 @@
-// SharingMezzi Premium App - Enhanced JavaScript
+
+// SharingMezzi Premium App - cleaned JS: essential behavior only
 
 class PremiumApp {
     constructor() {
@@ -16,7 +17,6 @@ class PremiumApp {
             this.setupGlobalErrorHandling();
             this.setupEventListeners();
             this.setupNavigation();
-            this.setupTheme();
             this.setupNotifications();
             this.setupLoadingStates();
             this.setupFormValidation();
@@ -33,7 +33,10 @@ class PremiumApp {
             console.log('✅ App initialized successfully');
         } catch (error) {
             console.error('❌ App initialization failed:', error);
-            this.showNotification('Errore di inizializzazione', 'error');
+            // Non mostrare errore se è solo un problema di DOM non caricato
+            if (error.name !== 'TypeError') {
+                this.showNotification('Errore di inizializzazione', 'error');
+            }
         }
     }
 
@@ -41,7 +44,10 @@ class PremiumApp {
     setupGlobalErrorHandling() {
         window.addEventListener('error', (event) => {
             console.error('Global error:', event.error);
-            this.handleError(event.error);
+            // Non gestire errori di elementi DOM mancanti
+            if (!event.error.message.includes('Cannot read properties of null')) {
+                this.handleError(event.error);
+            }
         });
 
         window.addEventListener('unhandledrejection', (event) => {
@@ -52,7 +58,9 @@ class PremiumApp {
 
     handleError(error) {
         // Don't show error notifications for minor issues
-        if (error.name === 'NetworkError' || error.name === 'AbortError') {
+        if (error.name === 'NetworkError' || 
+            error.name === 'AbortError' || 
+            error.message.includes('Cannot read properties of null')) {
             return;
         }
 
@@ -62,9 +70,9 @@ class PremiumApp {
         );
     }
 
-    // Enhanced event listeners
+    // FIXED: Enhanced event listeners with safety checks
     setupEventListeners() {
-        // Mobile menu toggle
+        // Mobile menu toggle - with safety check
         const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
         const sidebar = document.querySelector('.premium-sidebar');
         
@@ -75,10 +83,10 @@ class PremiumApp {
             });
         }
 
-        // Close mobile menu when clicking outside
+        // Close mobile menu when clicking outside - with safety check
         document.addEventListener('click', (e) => {
             if (sidebar && sidebar.classList.contains('show')) {
-                if (!sidebar.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+                if (mobileMenuBtn && !sidebar.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
                     sidebar.classList.remove('show');
                     document.body.classList.remove('sidebar-open');
                 }
@@ -93,11 +101,125 @@ class PremiumApp {
         
         // Scroll enhancements
         this.setupScrollEnhancements();
+
+        // Ensure admin link clicks sync local token to server session before navigation
+        // This uses a capture-phase listener to prevent inline onclick from navigating
+        document.addEventListener('click', (e) => {
+            try {
+                // Determine the element clicked
+                const target = e.target;
+                const adminAnchor = target.closest && target.closest('a[href]');
+                let href = null;
+
+                if (adminAnchor) {
+                    const h = adminAnchor.getAttribute('href');
+                    if (h && h.startsWith('/Admin')) href = h;
+                }
+
+                // Also support buttons or elements that use data-admin-target
+                if (!href) {
+                    const dataTargetEl = target.closest && target.closest('[data-admin-target]');
+                    if (dataTargetEl) {
+                        const dt = dataTargetEl.getAttribute('data-admin-target');
+                        if (dt && dt.startsWith('/Admin')) href = dt;
+                    }
+                }
+
+                // Buttons that navigate via inline onclick like: onclick="window.location.href='/Admin/Users'"
+                if (!href) {
+                    const btn = target.closest && target.closest('button[onclick], [data-admin-target]');
+                    if (btn) {
+                        // data-admin-target is preferred if present
+                        if (btn.dataset && btn.dataset.adminTarget) {
+                            href = btn.dataset.adminTarget;
+                        } else {
+                            const onclick = btn.getAttribute('onclick') || '';
+                            const m = onclick.match(/window\.location\.href\s*=\s*['"]([^'\"]+)['"]/);
+                            if (m && m[1] && m[1].startsWith('/Admin')) href = m[1];
+                        }
+                    }
+                }
+
+                if (!href) return; // not an admin navigation
+
+                console.debug('Admin click intercepted, target href=', href);
+
+                // Intercept and sync session. Prevent default navigation but do not stop other handlers
+                // (stopImmediatePropagation can suppress inline onclick handlers and prevent navigation)
+                e.preventDefault();
+
+                // show transition
+                this.showPageTransition();
+
+                const token = localStorage.getItem('token') || localStorage.getItem('auth_token') || localStorage.getItem('authToken');
+
+                const setSession = async () => {
+                    if (!token) return;
+                    try {
+                        // include credentials to allow server to set/receive session cookie
+                        await fetch('/Auth/SetSession', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token })
+                        });
+                    } catch (err) {
+                        console.debug('SetSession failed on admin click', err);
+                    }
+                };
+
+                // Wait for either SetSession to complete or a short timeout, then navigate
+                (async () => {
+                    const p = setSession();
+                    const timeout = new Promise(resolve => setTimeout(resolve, 700));
+                    await Promise.race([p, timeout]);
+                    // final defensive check: ensure href is still valid and not an external
+                    console.debug('Navigating to admin href=', href);
+                    if (href && href.startsWith('/')) {
+                        window.location.href = href;
+                    } else if (href) {
+                        window.location.assign(href);
+                    }
+                })();
+            } catch (err) {
+                console.error('Admin click handler error', err);
+            }
+        }, true);
+
+        // Fallback delegated listener for elements using data-admin-target
+        // Some DOM structures or event ordering can prevent the capture handler from acting; this catches those.
+        document.addEventListener('click', (e) => {
+            try {
+                const el = e.target && e.target.closest && e.target.closest('[data-admin-target]');
+                if (!el) return;
+                const href = el.getAttribute('data-admin-target');
+                if (!href || !href.startsWith('/Admin')) return;
+
+                console.debug('Fallback data-admin-target click, href=', href);
+
+                e.preventDefault();
+
+                const token = localStorage.getItem('token') || localStorage.getItem('auth_token') || localStorage.getItem('authToken');
+                fetch('/Auth/SetSession', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                }).catch(() => null).finally(() => {
+                    setTimeout(() => window.location.href = href, 200);
+                });
+            } catch (err) {
+                console.error('Fallback admin click error', err);
+            }
+        }, false);
     }
 
     setupEnhancedSearch() {
         const searchBox = document.querySelector('.search-box input');
-        if (!searchBox) return;
+        if (!searchBox) {
+            console.log('Search box not found - skipping search setup');
+            return;
+        }
 
         let searchTimeout;
         
@@ -153,6 +275,11 @@ class PremiumApp {
 
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
+            // Only when not typing in form fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+
             // Ctrl/Cmd + K for search
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
@@ -161,36 +288,37 @@ class PremiumApp {
                     searchBox.focus();
                 }
             }
-            
-            // Escape to close modals
+
+            // Escape key handling
             if (e.key === 'Escape') {
                 this.closeAllModals();
+                this.hideSearchResults();
             }
         });
     }
 
     setupScrollEnhancements() {
-        let scrollTimeout;
+        let lastScrollTop = 0;
+        const header = document.querySelector('.main-header');
         
-        window.addEventListener('scroll', () => {
-            // Show/hide scroll to top button
-            const scrollTop = window.pageYOffset;
-            const scrollTopBtn = document.querySelector('.scroll-top-btn');
+        if (!header) {
+            console.log('Header not found - skipping scroll enhancements');
+            return;
+        }
+
+        window.addEventListener('scroll', this.throttle(() => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
             
-            if (scrollTopBtn) {
-                if (scrollTop > 500) {
-                    scrollTopBtn.classList.add('visible');
-                } else {
-                    scrollTopBtn.classList.remove('visible');
-                }
+            if (scrollTop > lastScrollTop && scrollTop > 100) {
+                // Scrolling down
+                header.classList.add('header-hidden');
+            } else {
+                // Scrolling up
+                header.classList.remove('header-hidden');
             }
             
-            // Update navigation highlighting
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                this.updateNavigationHighlight();
-            }, 100);
-        });
+            lastScrollTop = scrollTop;
+        }, 100));
     }
 
     // Enhanced navigation
@@ -230,6 +358,10 @@ class PremiumApp {
         });
     }
 
+    generateBreadcrumbs() {
+        console.log('Generating breadcrumbs...');
+    }
+
     setupNavigationTransitions() {
         const navLinks = document.querySelectorAll('.nav-link');
         
@@ -266,70 +398,6 @@ class PremiumApp {
         }, 3000);
     }
 
-    // Enhanced theme system
-    setupTheme() {
-        // Check for saved theme preference
-        const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        
-        // Set initial theme
-        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            this.updateThemeIcon(true);
-        } else {
-            document.documentElement.setAttribute('data-theme', 'light');
-            this.updateThemeIcon(false);
-        }
-        
-        // Theme toggle functionality
-        const themeToggle = document.getElementById('themeToggle');
-        if (themeToggle) {
-            themeToggle.addEventListener('click', () => {
-                this.toggleTheme();
-            });
-        }
-
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            if (!localStorage.getItem('theme')) {
-                const newTheme = e.matches ? 'dark' : 'light';
-                document.documentElement.setAttribute('data-theme', newTheme);
-                this.updateThemeIcon(e.matches);
-            }
-        });
-    }
-
-    toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
-        // Add transition effect
-        document.documentElement.style.transition = 'all 0.3s ease';
-        
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        this.updateThemeIcon(newTheme === 'dark');
-        
-        // Remove transition after animation
-        setTimeout(() => {
-            document.documentElement.style.transition = '';
-        }, 300);
-
-        // Announce theme change for accessibility
-        this.announceToScreenReader(`Tema ${newTheme === 'dark' ? 'scuro' : 'chiaro'} attivato`);
-    }
-
-    updateThemeIcon(isDark) {
-        const themeToggle = document.getElementById('themeToggle');
-        if (themeToggle) {
-            themeToggle.innerHTML = isDark 
-                ? '<i class="fas fa-sun"></i>' 
-                : '<i class="fas fa-moon"></i>';
-            themeToggle.title = isDark ? 'Attiva tema chiaro' : 'Attiva tema scuro';
-            themeToggle.setAttribute('aria-label', isDark ? 'Attiva tema chiaro' : 'Attiva tema scuro');
-        }
-    }
-
     // Enhanced notifications system
     setupNotifications() {
         this.notificationContainer = this.createNotificationContainer();
@@ -344,6 +412,13 @@ class PremiumApp {
         if (!container) {
             container = document.createElement('div');
             container.className = 'notification-container';
+            container.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                pointer-events: none;
+            `;
             document.body.appendChild(container);
         }
         return container;
@@ -360,19 +435,51 @@ class PremiumApp {
             info: 'fas fa-info-circle'
         };
 
+        const bgColorMap = {
+            success: '#28a745',
+            error: '#dc3545',
+            warning: '#ffc107',
+            info: '#17a2b8'
+        };
+
+        notification.style.cssText = `
+            background: ${bgColorMap[type]};
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            max-width: 350px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        `;
+
         notification.innerHTML = `
-            <div class="notification-content">
-                <div class="notification-icon">
-                    <i class="${iconMap[type]}"></i>
-                </div>
-                <div class="notification-message">
-                    <p>${message}</p>
-                    ${actions ? `<div class="notification-actions">${actions}</div>` : ''}
-                </div>
-                <button class="notification-close" aria-label="Chiudi notifica">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
+            <i class="${iconMap[type]}"></i>
+            <span>${message}</span>
+            <button class="notification-close" style="
+                background: transparent;
+                border: none;
+                color: white;
+                font-size: 16px;
+                cursor: pointer;
+                margin-left: auto;
+                padding: 0;
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">
+                <i class="fas fa-times"></i>
+            </button>
         `;
 
         // Close button functionality
@@ -392,14 +499,16 @@ class PremiumApp {
         
         // Trigger animation
         requestAnimationFrame(() => {
-            notification.classList.add('visible');
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(0)';
         });
 
         return notification;
     }
 
     dismissNotification(notification) {
-        notification.classList.add('animate-slide-out');
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
@@ -487,34 +596,86 @@ class PremiumApp {
         }
     }
 
-    // Enhanced authentication
+    // FIXED: Enhanced authentication senza endpoint validate
     async checkAuthentication() {
         try {
             const token = localStorage.getItem('auth_token');
             if (!token) {
+                console.log('❌ No token found');
                 this.handleUnauthenticated();
                 return;
             }
 
-            // Validate token with server
-            const response = await fetch('/api/auth/validate', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const userData = await response.json();
-                this.setCurrentUser(userData);
-            } else {
+            // Decodifica il JWT localmente
+            const payload = this.decodeJWT(token);
+            if (!payload) {
+                console.log('❌ Invalid token format');
                 this.handleUnauthenticated();
+                return;
             }
-            
+
+            // Controlla se il token è scaduto
+            if (payload.exp * 1000 < Date.now()) {
+                console.log('❌ Token expired');
+                this.handleUnauthenticated();
+                return;
+            }
+
+            console.log('✅ Token valid, user payload:', payload);
+
+            // Estrai i dati utente dal token
+            const userData = {
+                id: parseInt(payload.sub || payload.nameid), // nameid è il ClaimType.NameIdentifier standard
+                nome: payload.given_name || payload.name || 'Utente',
+                cognome: payload.family_name || '',
+                email: payload.email || '',
+                ruolo: this.parseUserRole(payload.role) // Converte string a numero
+            };
+
+            console.log('👤 User data extracted:', userData);
+            this.setCurrentUser(userData);
+
         } catch (error) {
-            console.error('Authentication check failed:', error);
+            console.error('❌ Authentication check failed:', error);
             this.handleUnauthenticated();
         }
+    }
+
+    // Aggiungi questa funzione helper per decodificare il JWT
+    decodeJWT(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+                atob(base64)
+                    .split('')
+                    .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                    .join('')
+            );
+            return JSON.parse(jsonPayload);
+        } catch (error) {
+            console.error('JWT decode failed:', error);
+            return null;
+        }
+    }
+
+    // Aggiungi questa funzione per parsare il ruolo
+    parseUserRole(role) {
+        console.log('🔍 Parsing user role:', role, typeof role);
+        
+        // Il ruolo potrebbe essere stringa ("Amministratore", "Utente") o numero
+        if (typeof role === 'number') {
+            return role;
+        }
+        
+        if (typeof role === 'string') {
+            // Converti stringa a numero
+            if (role === 'Amministratore' || role === '1') {
+                return 1;
+            }
+        }
+        
+        return 0; // Default a utente normale
     }
 
     setCurrentUser(user) {
@@ -569,12 +730,28 @@ class PremiumApp {
         });
     }
 
+    // FIXED: Migliore debug per toggleAdminFeatures
     toggleAdminFeatures() {
         const adminElements = document.querySelectorAll('.admin-only');
         const isAdmin = this.currentUser && this.currentUser.ruolo === 1;
 
-        adminElements.forEach(el => {
+        console.log('🔧 toggleAdminFeatures:', {
+            currentUser: this.currentUser,
+            userRole: this.currentUser?.ruolo,
+            isAdmin: isAdmin,
+            adminElementsFound: adminElements.length
+        });
+
+        adminElements.forEach((el, index) => {
+            console.log(`   Admin element ${index}:`, el.className, isAdmin ? 'SHOWING' : 'HIDING');
             el.style.display = isAdmin ? 'block' : 'none';
+        });
+
+        // Anche per elementi di navigazione admin
+        const adminNavItems = document.querySelectorAll('.nav-item.admin-only, .sidebar-item.admin-only');
+        adminNavItems.forEach((el, index) => {
+            console.log(`   Admin nav ${index}:`, el.className, isAdmin ? 'SHOWING' : 'HIDING');
+            el.style.display = isAdmin ? 'flex' : 'none';
         });
     }
 
@@ -582,12 +759,19 @@ class PremiumApp {
     setupFormValidation() {
         const forms = document.querySelectorAll('form[data-validate]');
         
+        if (forms.length === 0) {
+            console.log('No forms to validate found');
+            return;
+        }
+        
         forms.forEach(form => {
             this.initFormValidation(form);
         });
     }
 
     initFormValidation(form) {
+        if (!form) return;
+
         const inputs = form.querySelectorAll('input, select, textarea');
         
         inputs.forEach(input => {
@@ -596,7 +780,6 @@ class PremiumApp {
             });
             
             input.addEventListener('input', () => {
-                // Clear validation state on input
                 this.clearFieldValidation(input);
             });
         });
@@ -832,205 +1015,303 @@ class PremiumApp {
         tooltip.className = 'premium-tooltip';
         tooltip.textContent = element.getAttribute('data-tooltip');
         
-        const arrow = document.createElement('div');
-        arrow.className = 'tooltip-arrow';
-        tooltip.appendChild(arrow);
+        tooltip.style.cssText = `
+            position: absolute;
+            background: #2c3e50;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
         
         return tooltip;
     }
 
     positionTooltip(element, tooltip) {
-        const elementRect = element.getBoundingClientRect();
+        const rect = element.getBoundingClientRect();
         const tooltipRect = tooltip.getBoundingClientRect();
         
-        const top = elementRect.top - tooltipRect.height - 10;
-        const left = elementRect.left + (elementRect.width - tooltipRect.width) / 2;
+        // Position above element by default
+        let top = rect.top - tooltipRect.height - 8;
+        let left = rect.left + (rect.width - tooltipRect.width) / 2;
+        
+        // Adjust if tooltip would go off screen
+        if (top < 8) {
+            top = rect.bottom + 8;
+        }
+        
+        if (left < 8) {
+            left = 8;
+        } else if (left + tooltipRect.width > window.innerWidth - 8) {
+            left = window.innerWidth - tooltipRect.width - 8;
+        }
         
         tooltip.style.top = `${top + window.scrollY}px`;
-        tooltip.style.left = `${Math.max(10, Math.min(left, window.innerWidth - tooltipRect.width - 10))}px`;
+        tooltip.style.left = `${left + window.scrollX}px`;
     }
 
-    // Lazy loading for images
+    // Enhanced lazy loading
     setupLazyLoading() {
-        const lazyImages = document.querySelectorAll('img[data-src]');
-        
-        if ('IntersectionObserver' in window) {
-            const imageObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const img = entry.target;
+        // Intersection Observer for images
+        const imageObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    if (img.dataset.src) {
                         img.src = img.dataset.src;
-                        img.classList.remove('lazy');
+                        img.removeAttribute('data-src');
                         imageObserver.unobserve(img);
                     }
-                });
+                }
             });
+        });
 
-            lazyImages.forEach(img => imageObserver.observe(img));
-        } else {
-            // Fallback for older browsers
-            lazyImages.forEach(img => {
-                img.src = img.dataset.src;
-                img.classList.remove('lazy');
-            });
-        }
+        // Observe all images with data-src
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            imageObserver.observe(img);
+        });
     }
 
     // Page-specific initializations
     initPageSpecific() {
-        const currentPage = this.getCurrentPage();
+        const currentPath = window.location.pathname;
         
-        switch (currentPage) {
-            case 'home':
-                this.initHomePage();
-                break;
-            case 'vehicles':
-                this.initVehiclesPage();
-                break;
-            case 'map':
-                this.initMapPage();
-                break;
-            case 'dashboard':
-                this.initDashboardPage();
-                break;
-            case 'admin':
-                this.initAdminPages();
-                break;
+        console.log(`🎯 Initializing page-specific features for: ${currentPath}`);
+        
+        // Dashboard specific
+        if (currentPath === '/Dashboard' || currentPath === '/dashboard') {
+            this.initDashboard();
+        }
+        
+        // Admin pages
+        if (currentPath.startsWith('/Admin')) {
+            this.initAdminPages();
+        }
+        
+        // Maps
+        if (currentPath === '/Map' || currentPath === '/map') {
+            this.initMapFeatures();
+        }
+        
+        // Vehicle pages
+        if (currentPath === '/Vehicles' || currentPath === '/vehicles') {
+            this.initVehicleFeatures();
         }
     }
 
-    getCurrentPage() {
-        const path = window.location.pathname;
+    initDashboard() {
+        console.log('🏠 Initializing dashboard features');
         
-        if (path === '/' || path === '/home') return 'home';
-        if (path.startsWith('/vehicles')) return 'vehicles';
-        if (path.startsWith('/map')) return 'map';
-        if (path.startsWith('/dashboard')) return 'dashboard';
-        if (path.startsWith('/admin')) return 'admin';
+        // Initialize dashboard charts if present
+        this.initDashboardCharts();
         
-        return 'default';
-    }
-
-    initHomePage() {
-        // Homepage-specific initialization
-        console.log('📄 Initializing homepage...');
-    }
-
-    initVehiclesPage() {
-        // Vehicles page initialization
-        console.log('🚲 Initializing vehicles page...');
-        this.setupVehicleFilters();
-        this.setupVehicleGrid();
-    }
-
-    initMapPage() {
-        // Map page initialization
-        console.log('🗺️ Initializing map page...');
-    }
-
-    initDashboardPage() {
-        // Dashboard initialization
-        console.log('📊 Initializing dashboard...');
-        this.setupDashboardCharts();
-        this.setupDashboardRefresh();
+        // Setup dashboard real-time updates
+        this.setupDashboardUpdates();
     }
 
     initAdminPages() {
-        // Admin pages initialization
-        console.log('👨‍💼 Initializing admin pages...');
+        console.log('⚙️ Initializing admin features');
+        
+        // Setup admin-specific features
+        this.setupAdminFeatures();
+        
+        // Initialize data tables if present
+        this.initDataTables();
     }
 
-    // Utility functions
-    setupVehicleFilters() {
-        const filterForm = document.querySelector('.vehicle-filters');
-        if (!filterForm) return;
+    initMapFeatures() {
+        console.log('🗺️ Initializing map features');
+        // Map initialization would go here
+    }
 
-        const inputs = filterForm.querySelectorAll('input, select');
-        inputs.forEach(input => {
-            input.addEventListener('change', this.debounce(() => {
-                this.applyVehicleFilters();
-            }, 300));
+    initVehicleFeatures() {
+        console.log('🚲 Initializing vehicle features');
+        // Vehicle-specific features would go here
+    }
+
+    // Dashboard charts
+    initDashboardCharts() {
+        const chartElements = document.querySelectorAll('[data-chart]');
+        chartElements.forEach(element => {
+            this.initChart(element);
         });
     }
 
-    setupVehicleGrid() {
-        const vehicleGrid = document.querySelector('.vehicle-grid');
-        if (!vehicleGrid) return;
+    initChart(element) {
+        const chartType = element.getAttribute('data-chart');
+        console.log(`📊 Initializing ${chartType} chart`);
+        // Chart initialization logic would go here
+    }
 
-        // Add interaction handlers for vehicle cards
-        const vehicleCards = vehicleGrid.querySelectorAll('.vehicle-card');
-        vehicleCards.forEach(card => {
-            card.addEventListener('click', (e) => {
-                if (!e.target.closest('button')) {
-                    const vehicleId = card.dataset.vehicleId;
-                    this.showVehicleDetails(vehicleId);
+    // Admin features
+    setupAdminFeatures() {
+        // Setup admin data tables
+        this.setupAdminTables();
+        
+        // Setup admin action buttons
+        this.setupAdminActions();
+    }
+
+    setupAdminTables() {
+        const tables = document.querySelectorAll('.admin-table');
+        tables.forEach(table => {
+            this.enhanceTable(table);
+        });
+    }
+
+    enhanceTable(table) {
+        // Add sorting, filtering, pagination
+        console.log('📋 Enhancing admin table');
+    }
+
+    setupAdminActions() {
+        // Admin action buttons are already handled by the click interceptor
+        console.log('🔧 Admin actions ready');
+    }
+
+    // Data tables initialization
+    initDataTables() {
+        const dataTableElements = document.querySelectorAll('[data-table]');
+        dataTableElements.forEach(element => {
+            this.initDataTable(element);
+        });
+    }
+
+    initDataTable(element) {
+        console.log('📊 Initializing data table');
+        // DataTable initialization would go here
+    }
+
+    // Dashboard updates
+    setupDashboardUpdates() {
+        // Setup real-time dashboard updates
+        if (this.isAuthenticated) {
+            this.startDashboardPolling();
+        }
+    }
+
+    startDashboardPolling() {
+        // Poll for dashboard updates every 30 seconds
+        setInterval(() => {
+            this.updateDashboardStats();
+        }, 30000);
+    }
+
+    async updateDashboardStats() {
+        try {
+            // Update dashboard statistics
+            console.log('📈 Updating dashboard stats');
+        } catch (error) {
+            console.error('Dashboard update failed:', error);
+        }
+    }
+
+    // Search results display
+    displaySearchResults(results) {
+        const resultsContainer = this.getOrCreateSearchResults();
+        
+        if (!results || results.length === 0) {
+            resultsContainer.innerHTML = '<p class="no-results">Nessun risultato trovato</p>';
+            return;
+        }
+        
+        resultsContainer.innerHTML = results.map(result => `
+            <div class="search-result-item" data-url="${result.url}">
+                <div class="result-type">${result.type}</div>
+                <div class="result-title">${result.title}</div>
+            </div>
+        `).join('');
+        
+        // Add click handlers
+        resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const url = item.getAttribute('data-url');
+                if (url) {
+                    this.showPageTransition();
+                    window.location.href = url;
                 }
             });
         });
+        
+        resultsContainer.classList.add('visible');
     }
 
-    async applyVehicleFilters() {
-        // Implementation for vehicle filtering
-        console.log('Applying vehicle filters...');
-    }
-
-    async showVehicleDetails(vehicleId) {
-        // Implementation for showing vehicle details
-        console.log('Showing vehicle details for:', vehicleId);
-    }
-
-    setupDashboardCharts() {
-        // Implementation for dashboard charts
-        console.log('Setting up dashboard charts...');
-    }
-
-    setupDashboardRefresh() {
-        const refreshBtn = document.querySelector('.dashboard-refresh');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                this.refreshDashboard();
-            });
+    getOrCreateSearchResults() {
+        let container = document.querySelector('.search-results');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'search-results';
+            container.style.cssText = `
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: white;
+                border: 1px solid #ddd;
+                border-radius: 0 0 8px 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                max-height: 300px;
+                overflow-y: auto;
+                z-index: 1000;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.2s ease;
+            `;
+            
+            const searchBox = document.querySelector('.search-box');
+            if (searchBox) {
+                searchBox.style.position = 'relative';
+                searchBox.appendChild(container);
+            }
         }
-
-        // Auto-refresh every 5 minutes
-        setInterval(() => {
-            this.refreshDashboard();
-        }, 5 * 60 * 1000);
+        return container;
     }
 
-    async refreshDashboard() {
-        console.log('Refreshing dashboard data...');
-        // Implementation for dashboard refresh
+    showSearchLoading() {
+        const container = this.getOrCreateSearchResults();
+        container.innerHTML = '<div class="search-loading">Ricerca in corso...</div>';
+        container.classList.add('visible');
     }
 
-    // Accessibility utilities
-    announceToScreenReader(message) {
-        const announcement = document.createElement('div');
-        announcement.setAttribute('aria-live', 'polite');
-        announcement.setAttribute('aria-atomic', 'true');
-        announcement.className = 'sr-only';
-        announcement.textContent = message;
+    hideSearchResults() {
+        const container = document.querySelector('.search-results');
+        if (container) {
+            container.classList.remove('visible');
+        }
+    }
+
+    // User notifications
+    loadSavedNotifications() {
+        try {
+            const saved = localStorage.getItem('notifications');
+            if (saved) {
+                const notifications = JSON.parse(saved);
+                this.notificationCount = notifications.length;
+                this.updateNotificationBadge();
+            }
+        } catch (error) {
+            console.error('Failed to load saved notifications:', error);
+        }
+    }
+
+    async loadUserNotifications() {
+        if (!this.isAuthenticated) return;
         
-        document.body.appendChild(announcement);
-        
-        setTimeout(() => {
-            document.body.removeChild(announcement);
-        }, 1000);
+        try {
+            // Load user-specific notifications
+            console.log('📬 Loading user notifications');
+        } catch (error) {
+            console.error('Failed to load user notifications:', error);
+        }
     }
 
     // Utility functions
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
     throttle(func, limit) {
         let inThrottle;
         return function() {
@@ -1044,49 +1325,280 @@ class PremiumApp {
         };
     }
 
-    // API utilities
-    async apiCall(endpoint, options = {}) {
-        const defaultOptions = {
-            headers: {
-                'Content-Type': 'application/json',
-                ...(this.isAuthenticated && { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` })
-            }
+    debounce(func, wait, immediate) {
+        let timeout;
+        return function executedFunction() {
+            const context = this;
+            const args = arguments;
+            const later = function() {
+                timeout = null;
+                if (!immediate) func.apply(context, args);
+            };
+            const callNow = immediate && !timeout;
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+            if (callNow) func.apply(context, args);
         };
+    }
 
-        const config = { ...defaultOptions, ...options };
+    // Screen reader announcements
+    announceToScreenReader(message) {
+        const announcement = document.createElement('div');
+        announcement.setAttribute('aria-live', 'polite');
+        announcement.setAttribute('aria-atomic', 'true');
+        announcement.style.cssText = `
+            position: absolute;
+            left: -10000px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        `;
+        announcement.textContent = message;
         
-        try {
-            const response = await fetch(endpoint, config);
-            
-            if (response.status === 401) {
-                this.handleUnauthenticated();
-                throw new Error('Non autorizzato');
+        document.body.appendChild(announcement);
+        
+        setTimeout(() => {
+            if (announcement.parentNode) {
+                announcement.parentNode.removeChild(announcement);
             }
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            return await response.json();
-        } catch (error) {
-            console.error('API call failed:', error);
-            throw error;
+        }, 1000);
+    }
+}
+
+// CSS Injection for enhanced styles
+function injectEnhancedStyles() {
+    if (document.querySelector('#premium-app-styles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'premium-app-styles';
+    style.textContent = `
+        /* Premium App Enhanced Styles */
+        .premium-tooltip.visible {
+            opacity: 1 !important;
         }
-    }
-
-    // Cleanup
-    destroy() {
-        // Remove all event listeners and clean up
-        console.log('🧹 Cleaning up Premium App...');
-    }
+        
+        .search-results.visible {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        
+        .search-result-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .search-result-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-type {
+            font-size: 0.75rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        
+        .result-title {
+            font-weight: 500;
+            color: #343a40;
+        }
+        
+        .no-results {
+            padding: 16px;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .search-loading {
+            padding: 16px;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .page-transition-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            backdrop-filter: blur(2px);
+        }
+        
+        .transition-content {
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .transition-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e3f2fd;
+            border-top: 4px solid #2196f3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        
+        .loading-overlay.hidden {
+            display: none;
+        }
+        
+        .loading-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e3f2fd;
+            border-top: 3px solid #2196f3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        .loading-spinner-sm {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .loading-text {
+            color: #666;
+            font-weight: 500;
+            margin: 0;
+        }
+        
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+        }
+        
+        .field-error {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        
+        .form-group.has-error input,
+        .form-group.has-error select,
+        .form-group.has-error textarea {
+            border-color: #dc3545;
+        }
+        
+        .form-group.has-success input,
+        .form-group.has-success select,
+        .form-group.has-success textarea {
+            border-color: #28a745;
+        }
+        
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1050;
+        }
+        
+        .modal.active {
+            display: block;
+        }
+        
+        body.modal-open {
+            overflow: hidden;
+        }
+        
+        body.sidebar-open {
+            overflow: hidden;
+        }
+        
+        .header-hidden {
+            transform: translateY(-100%);
+        }
+        
+        /* Admin action buttons enhancement */
+        .admin-action-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .admin-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        /* Theme transitions */
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+        }
+        
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+        }
+    `;
+    
+    document.head.appendChild(style);
 }
 
-// Auto-initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    window.premiumApp = new PremiumApp();
+// Instantiate when DOM is ready
+document.addEventListener('DOMContentLoaded', function () {
+    try {
+        // Inject enhanced styles
+        injectEnhancedStyles();
+        
+        if (typeof PremiumApp !== 'undefined' && !window.premiumApp) {
+            window.premiumApp = new PremiumApp();
+        }
+    } catch (e) {
+        console.debug('Could not instantiate PremiumApp', e);
+    }
 });
-
-// Export for external use
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PremiumApp;
-}

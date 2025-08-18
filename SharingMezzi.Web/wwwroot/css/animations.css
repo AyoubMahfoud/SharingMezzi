@@ -48,12 +48,6 @@
     transition: all 0.3s ease;
 }
 
-[data-theme="dark"] .notification {
-    background: rgba(26, 31, 46, 0.95);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
 .notification.visible {
     opacity: 1;
     transform: translateX(0);
@@ -112,10 +106,6 @@
 .notification-close:hover {
     background: rgba(0, 0, 0, 0.1);
     color: var(--text-primary);
-}
-
-[data-theme="dark"] .notification-close:hover {
-    background: rgba(255, 255, 255, 0.1);
 }
 
 .notification-success { border-left: 4px solid #10b981; }
@@ -297,12 +287,6 @@
     margin-top: 4px;
 }
 
-[data-theme="dark"] .search-results {
-    background: var(--bg-secondary);
-    border-color: var(--border-primary);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
 .search-result-item {
     display: flex;
     align-items: center;
@@ -312,16 +296,8 @@
     border-bottom: 1px solid #f1f5f9;
 }
 
-[data-theme="dark"] .search-result-item {
-    border-bottom-color: var(--border-secondary);
-}
-
 .search-result-item:hover {
     background: #f8fafc;
-}
-
-[data-theme="dark"] .search-result-item:hover {
-    background: var(--bg-tertiary);
 }
 
 .search-result-item:last-child {
@@ -365,11 +341,6 @@
     border-right: 1px solid var(--border-primary);
     box-shadow: var(--shadow-lg);
     transition: all 0.3s ease;
-}
-
-[data-theme="dark"] .premium-sidebar {
-    background: var(--bg-secondary);
-    border-right-color: var(--border-primary);
 }
 
 .sidebar-header {
@@ -462,11 +433,6 @@
     top: 0;
     z-index: 100;
     backdrop-filter: blur(20px);
-}
-
-[data-theme="dark"] .top-nav {
-    background: rgba(26, 31, 46, 0.9);
-    border-bottom-color: var(--border-primary);
 }
 
 .nav-left,
@@ -592,13 +558,6 @@
     margin-top: 8px;
 }
 
-[data-theme="dark"] .notification-dropdown,
-[data-theme="dark"] .user-dropdown {
-    background: var(--bg-secondary);
-    border-color: var(--border-primary);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-}
-
 .dropdown-header {
     padding: 16px 20px;
     border-bottom: 1px solid var(--border-secondary);
@@ -694,11 +653,6 @@
     border-top: 1px solid var(--border-primary);
     padding: 3rem 0 2rem;
     margin-top: 4rem;
-}
-
-[data-theme="dark"] .premium-footer {
-    background: var(--bg-tertiary);
-    border-top-color: var(--border-primary);
 }
 
 .footer-brand .brand {

@@ -12,6 +12,9 @@ namespace SharingMezzi.Web.Pages
         private readonly IAuthService _authService;
         private readonly ILogger<LoginModel> _logger;
 
+    [BindProperty(SupportsGet = true)]
+    public string? ReturnUrl { get; set; }
+
         public LoginModel(IAuthService authService, ILogger<LoginModel> logger)
         {
             _authService = authService;
@@ -27,6 +30,10 @@ namespace SharingMezzi.Web.Pages
         {
             // Skip auth check for testing
             Console.WriteLine("Login page loaded");
+            if (!string.IsNullOrEmpty(ReturnUrl))
+            {
+                ViewData["ReturnUrl"] = ReturnUrl;
+            }
             return Page();
         }
 
@@ -66,7 +73,14 @@ namespace SharingMezzi.Web.Pages
                 
                 if (authResponse?.Success == true)
                 {
-                    Console.WriteLine("✅ Login successful, redirecting to Dashboard");
+                    Console.WriteLine("✅ Login successful");
+                    var returnUrl = ReturnUrl;
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        Console.WriteLine($"Redirecting to ReturnUrl: {returnUrl}");
+                        return LocalRedirect(returnUrl);
+                    }
+                    Console.WriteLine("Redirecting to Dashboard");
                     return RedirectToPage("/Dashboard");
                 }
                 else

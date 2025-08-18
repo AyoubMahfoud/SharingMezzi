@@ -303,6 +303,7 @@ class AuthManager {
         try {
             await fetch('/Auth/SetSession', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json'
                 },

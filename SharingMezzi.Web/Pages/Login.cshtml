@@ -378,6 +378,7 @@
 
             <form method="post" class="auth-form" id="loginForm">
                 @Html.AntiForgeryToken()
+                <input type="hidden" name="ReturnUrl" value="@ViewData["ReturnUrl"]" />
                 
                 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
                 {
@@ -486,6 +487,27 @@
                 passwordField.focus();
             }
         });
+        
+        // If the client has a token in localStorage (from JS flows), ensure the server session is set
+        // This avoids forcing the user to re-login when navigating to server-rendered admin pages.
+        (async function ensureServerSessionFromLocalToken() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+
+                // Post to /Auth/SetSession to store token in server session
+                const resp = await fetch('/Auth/SetSession', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+
+                // ignore response; server will now have the token in session
+            } catch (e) {
+                // silent - not critical
+                console.warn('Could not set server session from local token', e);
+            }
+        })();
     </script>
 </body>
 </html>

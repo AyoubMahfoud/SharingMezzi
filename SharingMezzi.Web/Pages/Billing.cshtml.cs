@@ -29,13 +29,13 @@ namespace SharingMezzi.Web.Pages
         public List<Recharge> Recharges { get; set; } = new();
         public string? ErrorMessage { get; set; }
 
-        public async Task<IActionResult> OnGetAsync()
+    public async Task<IActionResult> OnGetAsync(string? returnUrl)
         {
             // Check if user is authenticated
             var token = _authService.GetToken();
             if (string.IsNullOrEmpty(token))
             {
-                return RedirectToPage("/Login");
+        return RedirectToPage("/Login", new { ReturnUrl = returnUrl ?? "/Billing" });
             }
 
             try
@@ -44,7 +44,7 @@ namespace SharingMezzi.Web.Pages
                 CurrentUser = await _authService.GetCurrentUserAsync();
                 if (CurrentUser == null)
                 {
-                    return RedirectToPage("/Login");
+                    return RedirectToPage("/Login", new { ReturnUrl = returnUrl ?? "/Billing" });
                 }
 
                 // Load billing data

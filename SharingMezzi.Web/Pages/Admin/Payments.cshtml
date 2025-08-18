@@ -1,0 +1,363 @@
+@page "/Admin/Payments"
+@model SharingMezzi.Web.Pages.Admin.PaymentsModel
+@{
+    ViewData["Title"] = "Gestione Transazioni";
+    Layout = "_Layout";
+}
+
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="hero-content">
+        <div class="welcome-message">
+            <h1 class="hero-title">
+                <i class="fas fa-money-bill"></i>
+                Gestione Transazioni
+            </h1>
+            <p class="hero-subtitle">Monitora pagamenti, ricariche e transazioni degli utenti</p>
+        </div>
+        
+        <div class="hero-actions">
+            <button class="btn btn-primary" onclick="exportTransactions()">
+                <i class="fas fa-download"></i>
+                Esporta CSV
+            </button>
+            <button class="btn btn-outline-primary" onclick="refreshPayments()">
+                <i class="fas fa-sync"></i>
+                Aggiorna
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card success">
+        <div class="stat-icon">
+            <i class="fas fa-euro-sign"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">€@Model.TotalRevenue.ToString("N2")</div>
+            <div class="stat-label">Ricavi Totali</div>
+            <div class="stat-change positive">
+                <i class="fas fa-arrow-up"></i>
+                <span>Tutte le transazioni</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card primary">
+        <div class="stat-icon">
+            <i class="fas fa-calendar-alt"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">€@Model.MonthlyRevenue.ToString("N2")</div>
+            <div class="stat-label">Ricavi Mensili</div>
+            <div class="stat-change positive">
+                <i class="fas fa-chart-line"></i>
+                <span>Questo mese</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card info">
+        <div class="stat-icon">
+            <i class="fas fa-list"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">@Model.TotalTransactions</div>
+            <div class="stat-label">Transazioni Totali</div>
+            <div class="stat-change">
+                <i class="fas fa-calculator"></i>
+                <span>Media: €@Model.AverageTransactionAmount.ToString("F2")</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card danger">
+        <div class="stat-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">@Model.FailedTransactions</div>
+            <div class="stat-label">Transazioni Fallite</div>
+            <div class="stat-change @(Model.FailedTransactions > 0 ? "negative" : "")">
+                <i class="fas fa-times-circle"></i>
+                <span>Richiedono attenzione</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payments Table -->
+<div class="content-section">
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fas fa-receipt"></i>
+            Cronologia Transazioni
+        </h2>
+        <div class="section-actions">
+            <div class="filter-select">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tutti gli stati</option>
+                    <option value="Completato">Completate</option>
+                    <option value="InAttesa">In Attesa</option>
+                    <option value="Fallito">Fallite</option>
+                    <option value="Annullato">Annullate</option>
+                </select>
+            </div>
+            <div class="search-box">
+                <input type="text" id="transactionSearch" placeholder="Cerca transazioni..." class="form-control">
+                <i class="fas fa-search"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="premium-card">
+        <div class="table-responsive">
+            <table class="table table-hover" id="paymentsTable">
+                <thead>
+                    <tr>
+                        <th>ID Transazione</th>
+                        <th>Utente</th>
+                        <th>Importo</th>
+                        <th>Metodo</th>
+                        <th>Stato</th>
+                        <th>Data</th>
+                        <th>Saldo Finale</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var payment in Model.Payments)
+                    {
+                        <tr class="payment-row" data-status="@payment.StatoPagamento.ToString().ToLower()">
+                            <td>
+                                <span class="fw-bold text-primary">@payment.TransactionId</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="user-avatar me-2">
+                                        U
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">Utente #@payment.UtenteId</div>
+                                        <small class="text-muted">ID: @payment.UtenteId</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-success">€@payment.Importo.ToString("F2")</span>
+                            </td>
+                            <td>
+                                @{
+                                    var methodIcon = payment.MetodoPagamento switch
+                                    {
+                                        SharingMezzi.Web.Models.PaymentMethod.CartaCredito => "credit-card",
+                                        SharingMezzi.Web.Models.PaymentMethod.PayPal => "paypal",
+                                        SharingMezzi.Web.Models.PaymentMethod.Bonifico => "university",
+                                        SharingMezzi.Web.Models.PaymentMethod.CreditoWallet => "wallet",
+                                        _ => "money-bill"
+                                    };
+                                    var methodClass = payment.MetodoPagamento switch
+                                    {
+                                        SharingMezzi.Web.Models.PaymentMethod.CartaCredito => "primary",
+                                        SharingMezzi.Web.Models.PaymentMethod.PayPal => "info",
+                                        SharingMezzi.Web.Models.PaymentMethod.Bonifico => "warning",
+                                        SharingMezzi.Web.Models.PaymentMethod.CreditoWallet => "success",
+                                        _ => "secondary"
+                                    };
+                                }
+                                <span class="badge bg-@methodClass">
+                                    <i class="fas fa-@methodIcon me-1"></i>
+                                    @payment.MetodoPagamento
+                                </span>
+                            </td>
+                            <td>
+                                @{
+                                    var statusClass = payment.StatoPagamento switch
+                                    {
+                                        SharingMezzi.Web.Models.PaymentStatus.Completato => "success",
+                                        SharingMezzi.Web.Models.PaymentStatus.InAttesa => "warning",
+                                        SharingMezzi.Web.Models.PaymentStatus.Fallito => "danger",
+                                        SharingMezzi.Web.Models.PaymentStatus.Annullato => "secondary",
+                                        _ => "secondary"
+                                    };
+                                    var statusIcon = payment.StatoPagamento switch
+                                    {
+                                        SharingMezzi.Web.Models.PaymentStatus.Completato => "check-circle",
+                                        SharingMezzi.Web.Models.PaymentStatus.InAttesa => "clock",
+                                        SharingMezzi.Web.Models.PaymentStatus.Fallito => "times-circle",
+                                        SharingMezzi.Web.Models.PaymentStatus.Annullato => "ban",
+                                        _ => "question-circle"
+                                    };
+                                }
+                                <span class="badge bg-@statusClass">
+                                    <i class="fas fa-@statusIcon me-1"></i>
+                                    @payment.StatoPagamento
+                                </span>
+                            </td>
+                            <td>
+                                <div>@payment.DataRicarica.ToString("dd/MM/yyyy")</div>
+                                <small class="text-muted">@payment.DataRicarica.ToString("HH:mm")</small>
+                            </td>
+                            <td>
+                                <span class="fw-semibold">€@payment.SaldoFinale.ToString("F2")</span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewTransactionDetails(@payment.Id)" title="Dettagli">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    @if (payment.StatoPagamento == SharingMezzi.Web.Models.PaymentStatus.Fallito)
+                                    {
+                                        <button class="btn btn-sm btn-outline-warning" onclick="retryTransaction(@payment.Id)" title="Riprova">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                    }
+                                    @if (payment.StatoPagamento == SharingMezzi.Web.Models.PaymentStatus.Completato)
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary" onclick="downloadReceipt(@payment.Id)" title="Ricevuta">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                        <a class="page-link" href="?page=@i">@i</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Transaction management functions
+        function viewTransactionDetails(id) {
+            console.log('View transaction details:', id);
+            showNotification('Apertura dettagli transazione', 'info');
+        }
+
+        function retryTransaction(id) {
+            if (confirm('Riprovare questa transazione?')) {
+                console.log('Retry transaction:', id);
+                showNotification('Transazione riprovata', 'warning');
+            }
+        }
+
+        function downloadReceipt(id) {
+            console.log('Download receipt:', id);
+            showNotification('Download ricevuta avviato', 'success');
+        }
+
+        function exportTransactions() {
+            console.log('Export transactions');
+            showNotification('Esportazione CSV avviata', 'info');
+        }
+
+        function refreshPayments() {
+            location.reload();
+        }
+
+        // Search functionality
+        document.getElementById('transactionSearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('.payment-row');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        // Status filter
+        document.getElementById('statusFilter').addEventListener('change', function(e) {
+            const status = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('.payment-row');
+            
+            rows.forEach(row => {
+                const rowStatus = row.getAttribute('data-status');
+                row.style.display = (!status || rowStatus === status) ? '' : 'none';
+            });
+        });
+
+        function showNotification(message, type = 'info') {
+            if (window.premiumApp && window.premiumApp.showNotification) {
+                window.premiumApp.showNotification(message, type);
+            } else {
+                alert(message);
+            }
+        }
+    </script>
+}
+
+@section Styles {
+    <style>
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .filter-select {
+            min-width: 150px;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-box {
+            position: relative;
+            min-width: 200px;
+        }
+
+        .search-box input {
+            padding-right: 40px;
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        @@media (max-width: 768px) {
+            .section-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .search-box,
+            .filter-select {
+                width: 100%;
+            }
+        }
+    </style>
+}

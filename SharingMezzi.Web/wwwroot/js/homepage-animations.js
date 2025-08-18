@@ -10,7 +10,6 @@ class HomepageAnimations {
         this.setupCountUpAnimations();
         this.setupFloatingCards();
         this.setupParallaxEffects();
-        this.setupThemeToggle();
         this.setupSmoothScrolling();
         this.initParticleBackground();
     }
@@ -124,57 +123,6 @@ class HomepageAnimations {
                 card.style.transform = `translateY(${cardRate}px)`;
             });
         });
-    }
-
-    // Theme toggle functionality
-    setupThemeToggle() {
-        const themeToggle = document.getElementById('themeToggle');
-        if (!themeToggle) return;
-
-        themeToggle.addEventListener('click', () => {
-            this.toggleTheme();
-        });
-
-        // Check for saved theme preference
-        this.initTheme();
-    }
-
-    initTheme() {
-        const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        
-        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            this.updateThemeIcon(true);
-        } else {
-            document.documentElement.setAttribute('data-theme', 'light');
-            this.updateThemeIcon(false);
-        }
-    }
-
-    toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        this.updateThemeIcon(newTheme === 'dark');
-        
-        // Add smooth transition effect
-        document.body.style.transition = 'all 0.3s ease';
-        setTimeout(() => {
-            document.body.style.transition = '';
-        }, 300);
-    }
-
-    updateThemeIcon(isDark) {
-        const themeToggle = document.getElementById('themeToggle');
-        if (themeToggle) {
-            themeToggle.innerHTML = isDark 
-                ? '<i class="fas fa-sun"></i>' 
-                : '<i class="fas fa-moon"></i>';
-            themeToggle.title = isDark ? 'Attiva tema chiaro' : 'Attiva tema scuro';
-        }
     }
 
     // Smooth scrolling for anchor links

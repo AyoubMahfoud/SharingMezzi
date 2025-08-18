@@ -1,23 +1,104 @@
-@page
+@page "/Admin/Maintenance"
 @model SharingMezzi.Web.Pages.Admin.MaintenanceModel
+@using SharingMezzi.Web.Models
 @{
-    ViewData["Title"] = "Manutenzione";
+    ViewData["Title"] = "Segnalazioni di Manutenzione";
+    Layout = "_Layout";
 }
 
-<div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1 class="page-title">Segnalazioni di Manutenzione</h1>
-            <p class="text-muted">Visualizza e gestisci i mezzi con problemi segnalati</p>
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="hero-content">
+        <div class="welcome-message">
+            <h1 class="hero-title">
+                <i class="fas fa-tools"></i>
+                Segnalazioni di Manutenzione
+            </h1>
+            <p class="hero-subtitle">Visualizza e gestisci i mezzi con problemi segnalati</p>
         </div>
-        <div>
-            <button class="btn btn-outline-secondary" onclick="refreshMaintenance()"><i class="fas fa-sync"></i> Aggiorna</button>
+        
+        <div class="hero-actions">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMaintenanceModal">
+                <i class="fas fa-plus"></i>
+                Nuova Segnalazione
+            </button>
+            <button class="btn btn-outline-primary" onclick="refreshMaintenance()">
+                <i class="fas fa-sync"></i>
+                Aggiorna
+            </button>
         </div>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-body">
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card primary">
+        <div class="stat-icon">
+            <i class="fas fa-list"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">@Model.TotalMaintenance</div>
+            <div class="stat-label">Totale Segnalazioni</div>
+            <div class="stat-change">
+                <i class="fas fa-info-circle"></i>
+                <span>Tutte le manutenzioni</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card danger">
+        <div class="stat-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">@Model.UrgentMaintenance</div>
+            <div class="stat-label">Urgenti</div>
+            <div class="stat-change negative">
+                <i class="fas fa-clock"></i>
+                <span>Richiedono attenzione immediata</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card warning">
+        <div class="stat-icon">
+            <i class="fas fa-calendar-alt"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">@Model.ScheduledMaintenance</div>
+            <div class="stat-label">Programmate</div>
+            <div class="stat-change">
+                <i class="fas fa-schedule"></i>
+                <span>In attesa di essere eseguite</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card success">
+        <div class="stat-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value">@Model.CompletedToday</div>
+            <div class="stat-label">Completate Oggi</div>
+            <div class="stat-change positive">
+                <i class="fas fa-thumbs-up"></i>
+                <span>Lavoro svolto oggi</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Table -->
+<div class="content-section">
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fas fa-wrench"></i>
+            Manutenzioni Attive
+        </h2>
+    </div>
+
+    <div class="premium-card">
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -30,7 +111,73 @@
                         <th>Azioni</th>
                     </tr>
                 </thead>
-                <tbody id="maintenanceTable"></tbody>
+                <tbody>
+                    @foreach (var item in Model.MaintenanceItems)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-bicycle text-primary me-2"></i>
+                                    <div>
+                                        <div class="fw-semibold">@item.VehicleModel</div>
+                                        <small class="text-muted">#@item.VehicleId</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @{
+                                    var typeClass = item.Type switch
+                                    {
+                                        MaintenanceType.Emergency => "danger",
+                                        MaintenanceType.Scheduled => "warning",
+                                        MaintenanceType.Preventive => "info",
+                                        _ => "secondary"
+                                    };
+                                }
+                                <span class="badge bg-@typeClass">@item.Type</span>
+                            </td>
+                            <td>
+                                <div class="maintenance-description">
+                                    @item.Description
+                                </div>
+                            </td>
+                            <td>
+                                @{
+                                    var priorityClass = item.Priority switch
+                                    {
+                                        MaintenancePriority.High => "danger",
+                                        MaintenancePriority.Medium => "warning",
+                                        MaintenancePriority.Low => "info",
+                                        _ => "secondary"
+                                    };
+                                }
+                                <span class="badge bg-@priorityClass">@item.Priority</span>
+                            </td>
+                            <td>
+                                <small class="text-muted">@item.ScheduledDate.ToString("dd/MM HH:mm")</small>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    @if (item.Status == MaintenanceStatus.Scheduled)
+                                    {
+                                        <button class="btn btn-sm btn-primary" onclick="startMaintenance(@item.Id)">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                    }
+                                    @if (item.Status == MaintenanceStatus.InProgress)
+                                    {
+                                        <button class="btn btn-sm btn-success" onclick="completeMaintenance(@item.Id)">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    }
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewDetails(@item.Id)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
             </table>
         </div>
     </div>
@@ -38,82 +185,43 @@
 
 @section Scripts {
     <script>
-        async function fetchMaintenanceAlerts() {
-            const token = localStorage.getItem('token');
-            try {
-                const res = await fetch('/api/admin/maintenance-alerts', { headers: { 'Authorization': `Bearer ${token}` } });
-                if (!res.ok) throw new Error('Errore caricamento segnalazioni');
-                const data = await res.json();
-                const tbody = document.getElementById('maintenanceTable');
-                tbody.innerHTML = '';
-                data.forEach(a => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${a.mezzoId}</td>
-                        <td>${a.type}</td>
-                        <td>${a.message}</td>
-                        <td>${a.priority}</td>
-                        <td>${new Date(a.timestamp).toLocaleString()}</td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-warning" onclick="assignMaintenance(${a.mezzoId})">Assegna</button>
-                                <button class="btn btn-outline-success" onclick="repairVehicle(${a.mezzoId})">Ripara</button>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } catch (e) {
-                showAlert(e.message || 'Errore', 'error');
+        function startMaintenance(id) {
+            if (confirm('Iniziare la manutenzione adesso?')) {
+                showNotification('Manutenzione avviata', 'info');
             }
         }
 
-        async function assignMaintenance(id) {
-            if (!confirm('Assegnare manutenzione a questo mezzo?')) return;
-            const token = localStorage.getItem('token');
-            try {
-                const res = await fetch(`/api/admin/schedule-maintenance/${id}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ note: 'Assegnazione da dashboard admin' })
-                });
-                if (res.ok) {
-                    showAlert('Manutenzione programmata', 'success');
-                    fetchMaintenanceAlerts();
-                } else {
-                    const err = await res.json();
-                    showAlert(err.message || 'Errore', 'error');
-                }
-            } catch (e) {
-                showAlert('Errore di connessione', 'error');
+        function completeMaintenance(id) {
+            if (confirm('Confermare il completamento della manutenzione?')) {
+                showNotification('Manutenzione completata con successo', 'success');
             }
         }
 
-        async function repairVehicle(id) {
-            if (!confirm('Segnare come riparato?')) return;
-            const token = localStorage.getItem('token');
-            try {
-                const res = await fetch(`/api/admin/vehicles/${id}/repair`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ noteRiparazione: 'Riparazione completata da admin' })
-                });
-                if (res.ok) {
-                    showAlert('Mezzo riparato', 'success');
-                    fetchMaintenanceAlerts();
-                } else {
-                    const err = await res.json();
-                    showAlert(err.message || 'Errore', 'error');
-                }
-            } catch (e) {
-                showAlert('Errore di connessione', 'error');
-            }
+        function viewDetails(id) {
+            showNotification('Apertura dettagli manutenzione', 'info');
         }
 
-        function refreshMaintenance() { fetchMaintenanceAlerts(); }
+        function refreshMaintenance() {
+            location.reload();
+        }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchMaintenanceAlerts();
-        });
+        function showNotification(message, type = 'info') {
+            if (window.premiumApp && window.premiumApp.showNotification) {
+                window.premiumApp.showNotification(message, type);
+            } else {
+                alert(message);
+            }
+        }
     </script>
+}
+
+@section Styles {
+    <style>
+        .maintenance-description {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
 }

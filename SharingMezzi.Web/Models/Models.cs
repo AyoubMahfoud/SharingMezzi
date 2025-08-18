@@ -97,6 +97,12 @@ namespace SharingMezzi.Web.Models
         // Italian properties for compatibility
         public DateTime DataInizio => Inizio;
         public DateTime? DataFine => Fine;
+        
+        // English properties for compatibility
+        public int UserId { get => UtenteId; set => UtenteId = value; }
+        public int VehicleId { get => MezzoId; set => MezzoId = value; }
+        public int StartParkingId { get => ParcheggioPartenzaId; set => ParcheggioPartenzaId = value; }
+        public int? EndParkingId { get => ParcheggioDestinazioneId; set => ParcheggioDestinazioneId = value; }
     }
 
     public class Recharge
@@ -115,6 +121,24 @@ namespace SharingMezzi.Web.Models
         // Added properties for compatibility with views
         public PaymentStatus Stato { get => StatoPagamento; set => StatoPagamento = value; }
         public decimal SaldoFinale { get; set; }
+    }
+
+    public class Payment
+    {
+        public int Id { get; set; }
+        public int UtenteId { get; set; }
+        public User? Utente { get; set; }
+        public decimal Importo { get; set; }
+        public PaymentMethod MetodoPagamento { get; set; }
+        public PaymentStatus StatoPagamento { get; set; }
+        public DateTime DataPagamento { get; set; }
+        public string? TransactionId { get; set; }
+        public string? Descrizione { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        
+        // Added properties for compatibility with views
+        public PaymentStatus Stato { get => StatoPagamento; set => StatoPagamento = value; }
     }
 
     public class LoginRequest
@@ -167,6 +191,8 @@ namespace SharingMezzi.Web.Models
 
     public class RechargeRequest
     {
+        public int UserId { get; set; }
+        
         [Required]
         public decimal Importo { get; set; }
 
@@ -174,6 +200,10 @@ namespace SharingMezzi.Web.Models
         public PaymentMethod MetodoPagamento { get; set; }
 
         public string? PaymentDetails { get; set; }
+        
+        // English properties for compatibility
+        public decimal Amount { get => Importo; set => Importo = value; }
+        public string PaymentMethodString { get => MetodoPagamento.ToString(); set => MetodoPagamento = Enum.Parse<PaymentMethod>(value, true); }
     }
 
     public class MaintenanceRequest
@@ -260,5 +290,66 @@ namespace SharingMezzi.Web.Models
         public decimal AverageRating { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        
+        // Additional properties for compatibility
+        public int CompletedTrips { get; set; }
+        public decimal CurrentCredit { get; set; }
+        public int TotalMinutes { get; set; }
+        public string FavoriteVehicle { get; set; } = string.Empty;
+        public DateTime? LastTrip { get; set; }
+    }
+
+    public class TripData
+    {
+        public DateTime Date { get; set; }
+        public int TripCount { get; set; }
+        public decimal Revenue { get; set; }
+    }
+
+    public class SystemStatus
+    {
+        public string DatabaseStatus { get; set; } = string.Empty;
+        public string MqttBrokerStatus { get; set; } = string.Empty;
+        public string SignalRStatus { get; set; } = string.Empty;
+        public int IoTDevicesConnected { get; set; }
+        public DateTime LastUpdate { get; set; }
+        public string Uptime { get; set; } = string.Empty;
+    }
+
+    public class MaintenanceItem
+    {
+        public int Id { get; set; }
+        public int VehicleId { get; set; }
+        public string VehicleModel { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public MaintenancePriority Priority { get; set; }
+        public MaintenanceStatus Status { get; set; }
+        public MaintenanceType Type { get; set; }
+        public string AssignedTechnician { get; set; } = string.Empty;
+        public DateTime ScheduledDate { get; set; }
+        public DateTime EstimatedCompletion { get; set; }
+        public DateTime? CompletedDate { get; set; }
+    }
+
+    public enum MaintenancePriority
+    {
+        Low,
+        Medium,
+        High
+    }
+
+    public enum MaintenanceStatus
+    {
+        Scheduled,
+        InProgress,
+        Completed,
+        Cancelled
+    }
+
+    public enum MaintenanceType
+    {
+        Scheduled,
+        Emergency,
+        Preventive
     }
 }

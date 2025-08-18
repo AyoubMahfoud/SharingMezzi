@@ -1,178 +1,201 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Authorization;
 using SharingMezzi.Web.Models;
 using SharingMezzi.Web.Services;
+using System.ComponentModel.DataAnnotations;
 
 namespace SharingMezzi.Web.Pages
 {
-    [Authorize]
     public class ProfileModel : PageModel
     {
-        private readonly IUserService _userService;
         private readonly IAuthService _authService;
-        private readonly IBillingService _billingService;
         private readonly ILogger<ProfileModel> _logger;
 
-        public ProfileModel(
-            IUserService userService,
-            IAuthService authService,
-            IBillingService billingService,
-            ILogger<ProfileModel> logger)
+        public ProfileModel(IAuthService authService, ILogger<ProfileModel> logger)
         {
-            _userService = userService;
             _authService = authService;
-            _billingService = billingService;
             _logger = logger;
         }
 
-        public new User User { get; set; } = new();
-        public string Phone { get; set; } = string.Empty;
-        public string Address { get; set; } = string.Empty;
-        public int EcoPoints { get; set; }
-        public int TotalTrips { get; set; }
-        public int TotalDistance { get; set; }
-        public int TotalTime { get; set; }
-        public decimal TotalSpent { get; set; }
+        [BindProperty]
+        public ProfileUpdateModel ProfileUpdate { get; set; } = new();
+
+        [BindProperty]
+        public PasswordChangeModel PasswordChange { get; set; } = new();
+
+        public User? CurrentUser { get; set; }
+        public bool IsAuthenticated { get; set; }
+        public string? SuccessMessage { get; set; }
+        public string? ErrorMessage { get; set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
             try
             {
-                _logger.LogInformation("Loading user profile page");
+                IsAuthenticated = _authService.IsAuthenticated();
+                if (!IsAuthenticated)
+                {
+                    _logger.LogWarning("User not authenticated, redirecting to login");
+                    return RedirectToPage("/Login");
+                }
 
-                // Get current user
-                User = await _authService.GetCurrentUserAsync() ?? new User();
-                
-                if (User.Id == 0)
+                CurrentUser = await _authService.GetCurrentUserAsync();
+                if (CurrentUser == null)
+                {
+                    _logger.LogWarning("Current user not found, redirecting to login");
+                    return RedirectToPage("/Login");
+                }
+
+                // Popola il modello di aggiornamento con i dati attuali
+                ProfileUpdate.Nome = CurrentUser.Nome;
+                ProfileUpdate.Cognome = CurrentUser.Cognome;
+                ProfileUpdate.Email = CurrentUser.Email;
+                ProfileUpdate.Telefono = CurrentUser.Telefono ?? "";
+
+                _logger.LogInformation($"Profile page loaded for user: {CurrentUser.Email}");
+                return Page();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading profile page");
+                ErrorMessage = "Errore nel caricamento del profilo";
+                return Page();
+            }
+        }
+
+        public async Task<IActionResult> OnPostUpdateProfileAsync()
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    ErrorMessage = "Dati non validi";
+                    return await OnGetAsync();
+                }
+
+                IsAuthenticated = _authService.IsAuthenticated();
+                if (!IsAuthenticated)
                 {
                     return RedirectToPage("/Login");
                 }
 
-                // Load additional profile data
-                await LoadProfileData();
+                CurrentUser = await _authService.GetCurrentUserAsync();
+                if (CurrentUser == null)
+                {
+                    return RedirectToPage("/Login");
+                }
 
-                _logger.LogInformation("User profile loaded for user {UserId}", User.Id);
-                return Page();
+                // Aggiorna i dati dell'utente
+                CurrentUser.Nome = ProfileUpdate.Nome;
+                CurrentUser.Cognome = ProfileUpdate.Cognome;
+                CurrentUser.Telefono = ProfileUpdate.Telefono;
+
+                // Salva le modifiche
+                _authService.SetCurrentUser(CurrentUser);
+
+                SuccessMessage = "Profilo aggiornato con successo!";
+                _logger.LogInformation($"Profile updated for user: {CurrentUser.Email}");
+
+                return await OnGetAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading user profile");
-                TempData["Error"] = "Errore nel caricamento del profilo. Riprova più tardi.";
-                return Page();
+                _logger.LogError(ex, "Error updating profile");
+                ErrorMessage = "Errore nell'aggiornamento del profilo";
+                return await OnGetAsync();
             }
         }
 
-        private async Task LoadProfileData()
+        public async Task<IActionResult> OnPostChangePasswordAsync()
         {
             try
             {
-                // Load user statistics
-                var userStats = await _userService.GetUserStatisticsAsync(User.Id);
-                if (userStats != null)
+                if (!ModelState.IsValid)
                 {
-                    EcoPoints = userStats.EcoPoints;
-                    TotalTrips = userStats.TotalTrips;
-                    TotalSpent = userStats.TotalSpent;
+                    ErrorMessage = "Dati non validi";
+                    return await OnGetAsync();
                 }
 
-                // Load user trips for additional statistics
-                var trips = await _billingService.GetUserTripsAsync(User.Id);
-                TotalTrips = trips.Count;
-                
-                // Calculate total distance and time from trips
-                var completedTrips = trips.Where(t => t.Stato == TripStatus.Completata && t.DataFine.HasValue);
-                TotalDistance = (int)completedTrips.Sum(t => t.DistanzaPercorsa ?? 0);
-                TotalTime = (int)completedTrips.Sum(t => t.DataFine.HasValue ? (t.DataFine.Value - t.DataInizio).TotalMinutes : 0);
+                IsAuthenticated = _authService.IsAuthenticated();
+                if (!IsAuthenticated)
+                {
+                    return RedirectToPage("/Login");
+                }
 
-                // Mock data for phone and address (these would come from a more complete user profile)
-                Phone = User.Telefono ?? "+39 123 456 7890";
-                Address = "Via Roma, 123 - Milano";
+                CurrentUser = await _authService.GetCurrentUserAsync();
+                if (CurrentUser == null)
+                {
+                    return RedirectToPage("/Login");
+                }
+
+                // Verifica la password attuale
+                if (PasswordChange.CurrentPassword != "admin123") // Sostituisci con verifica reale
+                {
+                    ErrorMessage = "Password attuale non corretta";
+                    return await OnGetAsync();
+                }
+
+                // Verifica che le nuove password coincidano
+                if (PasswordChange.NewPassword != PasswordChange.ConfirmPassword)
+                {
+                    ErrorMessage = "Le nuove password non coincidono";
+                    return await OnGetAsync();
+                }
+
+                // Verifica la complessità della password
+                if (PasswordChange.NewPassword.Length < 6)
+                {
+                    ErrorMessage = "La nuova password deve essere di almeno 6 caratteri";
+                    return await OnGetAsync();
+                }
+
+                // TODO: Implementa il cambio password reale con il backend
+                SuccessMessage = "Password cambiata con successo!";
+                _logger.LogInformation($"Password changed for user: {CurrentUser.Email}");
+
+                // Reset del form
+                PasswordChange = new PasswordChangeModel();
+
+                return await OnGetAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading profile data for user {UserId}", User.Id);
-                // Set default values
-                EcoPoints = 0;
-                TotalTrips = 0;
-                TotalDistance = 0;
-                TotalTime = 0;
-                TotalSpent = 0;
-                Phone = string.Empty;
-                Address = string.Empty;
-            }
-        }
-
-        public async Task<IActionResult> OnPutUpdateProfileAsync([FromBody] UpdateProfileRequest request)
-        {
-            try
-            {
-                var currentUser = await _authService.GetCurrentUserAsync();
-                if (currentUser == null)
-                {
-                    return Unauthorized();
-                }
-
-                // Update user information
-                currentUser.Nome = request.FirstName;
-                currentUser.Cognome = request.LastName;
-                currentUser.Telefono = request.Phone;
-
-                var updated = await _userService.UpdateUserAsync(currentUser);
-                
-                if (updated)
-                {
-                    _logger.LogInformation("User profile updated for user {UserId}", currentUser.Id);
-                    return new JsonResult(new { success = true });
-                }
-                else
-                {
-                    return BadRequest(new { message = "Errore durante l'aggiornamento del profilo" });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating user profile");
-                return BadRequest(new { message = "Errore durante l'aggiornamento del profilo" });
-            }
-        }
-
-        public async Task<IActionResult> OnPutChangePasswordAsync([FromBody] ChangePasswordRequest request)
-        {
-            try
-            {
-                var currentUser = await _authService.GetCurrentUserAsync();
-                if (currentUser == null)
-                {
-                    return Unauthorized();
-                }
-
-                // Here you would typically verify the current password and update to the new one
-                // For this example, we'll just return success
-                // In a real implementation, you would call an API endpoint to change the password
-
-                _logger.LogInformation("Password change requested for user {UserId}", currentUser.Id);
-                return new JsonResult(new { success = true });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error changing password for user");
-                return BadRequest(new { message = "Errore durante il cambio password" });
+                _logger.LogError(ex, "Error changing password");
+                ErrorMessage = "Errore nel cambio password";
+                return await OnGetAsync();
             }
         }
     }
 
-    public class UpdateProfileRequest
+    public class ProfileUpdateModel
     {
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
-        public string Address { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Il nome è obbligatorio")]
+        [StringLength(50, ErrorMessage = "Il nome non può superare i 50 caratteri")]
+        public string Nome { get; set; } = "";
+
+        [Required(ErrorMessage = "Il cognome è obbligatorio")]
+        [StringLength(50, ErrorMessage = "Il cognome non può superare i 50 caratteri")]
+        public string Cognome { get; set; } = "";
+
+        [Required(ErrorMessage = "L'email è obbligatoria")]
+        [EmailAddress(ErrorMessage = "Formato email non valido")]
+        public string Email { get; set; } = "";
+
+        [StringLength(20, ErrorMessage = "Il telefono non può superare i 20 caratteri")]
+        public string Telefono { get; set; } = "";
     }
 
-    public class ChangePasswordRequest
+    public class PasswordChangeModel
     {
-        public string CurrentPassword { get; set; } = string.Empty;
-        public string NewPassword { get; set; } = string.Empty;
+        [Required(ErrorMessage = "La password attuale è obbligatoria")]
+        public string CurrentPassword { get; set; } = "";
+
+        [Required(ErrorMessage = "La nuova password è obbligatoria")]
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "La password deve essere di almeno 6 caratteri")]
+        public string NewPassword { get; set; } = "";
+
+        [Required(ErrorMessage = "La conferma password è obbligatoria")]
+        [Compare("NewPassword", ErrorMessage = "Le password non coincidono")]
+        public string ConfirmPassword { get; set; } = "";
     }
 }

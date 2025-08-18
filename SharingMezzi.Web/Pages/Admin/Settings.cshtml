@@ -1,0 +1,461 @@
+@page "/Admin/Settings"
+@model SharingMezzi.Web.Pages.Admin.SettingsModel
+@{
+    ViewData["Title"] = "Impostazioni Sistema";
+    Layout = "_Layout";
+}
+
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="hero-content">
+        <div class="welcome-message">
+            <h1 class="hero-title">
+                <i class="fas fa-cog"></i>
+                Impostazioni Sistema
+            </h1>
+            <p class="hero-subtitle">Configura i parametri globali della piattaforma</p>
+        </div>
+        
+        <div class="hero-actions">
+            <button class="btn btn-success" onclick="saveAllSettings()">
+                <i class="fas fa-save"></i>
+                Salva Tutto
+            </button>
+            <button class="btn btn-outline-secondary" onclick="resetToDefaults()">
+                <i class="fas fa-undo"></i>
+                Ripristina Default
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Form -->
+<form method="post" id="settingsForm">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- General Settings -->
+            <div class="premium-card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-sliders-h"></i>
+                        Impostazioni Generali
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Nome Sistema</label>
+                                <input type="text" class="form-control" asp-for="Settings.SystemName">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Versione</label>
+                                <input type="text" class="form-control" asp-for="Settings.SystemVersion" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Settings.MaintenanceMode" id="maintenanceMode">
+                                    <label class="form-check-label" for="maintenanceMode">
+                                        Modalità Manutenzione
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Settings.AllowNewRegistrations" id="allowRegistrations">
+                                    <label class="form-check-label" for="allowRegistrations">
+                                        Consenti Nuove Registrazioni
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Max Tentativi Login</label>
+                                <input type="number" class="form-control" asp-for="Settings.MaxLoginAttempts" min="1" max="10">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Timeout Sessione (minuti)</label>
+                                <input type="number" class="form-control" asp-for="Settings.SessionTimeoutMinutes" min="30" max="480">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vehicle Settings -->
+            <div class="premium-card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-bicycle"></i>
+                        Impostazioni Mezzi
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Soglia Batteria Bassa (%)</label>
+                                <input type="number" class="form-control" asp-for="Settings.DefaultBatteryThreshold" min="5" max="50">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Durata Max Corsa (ore)</label>
+                                <input type="number" class="form-control" asp-for="Settings.MaxTripDurationHours" min="1" max="48">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Timeout Auto-Ritorno (minuti)</label>
+                                <input type="number" class="form-control" asp-for="Settings.AutoReturnTimeoutMinutes" min="60" max="720">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Intervallo Manutenzione (giorni)</label>
+                                <input type="number" class="form-control" asp-for="Settings.MaintenanceIntervalDays" min="7" max="365">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Settings -->
+            <div class="premium-card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-credit-card"></i>
+                        Impostazioni Pagamenti
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tariffa Default (€/min)</label>
+                                <input type="number" step="0.01" class="form-control" asp-for="Settings.DefaultTariffPerMinute" min="0.05" max="2.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Soglia Credito Basso (€)</label>
+                                <input type="number" step="0.01" class="form-control" asp-for="Settings.LowCreditThreshold" min="1" max="50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Ricarica Minima (€)</label>
+                                <input type="number" step="0.01" class="form-control" asp-for="Settings.MinimumCreditAmount" min="1" max="100">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Ricarica Massima (€)</label>
+                                <input type="number" step="0.01" class="form-control" asp-for="Settings.MaximumCreditAmount" min="50" max="1000">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Settings.AutoRechargeEnabled" id="autoRecharge">
+                                    <label class="form-check-label" for="autoRecharge">
+                                        Auto-Ricarica Abilitata
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Importo Auto-Ricarica (€)</label>
+                                <input type="number" step="0.01" class="form-control" asp-for="Settings.AutoRechargeAmount" min="10" max="100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="premium-card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-shield-alt"></i>
+                        Impostazioni Sicurezza
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Settings.TwoFactorAuthRequired" id="twoFactor">
+                                    <label class="form-check-label" for="twoFactor">
+                                        Autenticazione a Due Fattori Obbligatoria
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Lunghezza Minima Password</label>
+                                <input type="number" class="form-control" asp-for="Settings.PasswordMinLength" min="6" max="20">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Settings.PasswordRequireSpecialChars" id="specialChars">
+                                    <label class="form-check-label" for="specialChars">
+                                        Richiedi Caratteri Speciali
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Rate Limit API (per ora)</label>
+                                <input type="number" class="form-control" asp-for="Settings.ApiRateLimitPerHour" min="100" max="10000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Notification Settings -->
+            <div class="premium-card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-bell"></i>
+                        Notifiche
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="Settings.EmailNotificationsEnabled" id="emailNotifications">
+                            <label class="form-check-label" for="emailNotifications">
+                                Notifiche Email
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="Settings.SmsNotificationsEnabled" id="smsNotifications">
+                            <label class="form-check-label" for="smsNotifications">
+                                Notifiche SMS
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="Settings.PushNotificationsEnabled" id="pushNotifications">
+                            <label class="form-check-label" for="pushNotifications">
+                                Notifiche Push
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="Settings.MaintenanceAlertsEnabled" id="maintenanceAlerts">
+                            <label class="form-check-label" for="maintenanceAlerts">
+                                Avvisi Manutenzione
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="Settings.LowBatteryAlertsEnabled" id="batteryAlerts">
+                            <label class="form-check-label" for="batteryAlerts">
+                                Avvisi Batteria Bassa
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Integration Settings -->
+            <div class="premium-card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-plug"></i>
+                        Integrazioni
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">MQTT Broker URL</label>
+                        <input type="text" class="form-control" asp-for="Settings.MqttBrokerUrl">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="Settings.MqttEnabled" id="mqttEnabled">
+                            <label class="form-check-label" for="mqttEnabled">
+                                MQTT Abilitato
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="Settings.SignalREnabled" id="signalrEnabled">
+                            <label class="form-check-label" for="signalrEnabled">
+                                SignalR Abilitato
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="Settings.ApiLoggingEnabled" id="apiLogging">
+                            <label class="form-check-label" for="apiLogging">
+                                Log API Abilitato
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Status -->
+            <div class="premium-card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-server"></i>
+                        Stato Sistema
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="status-item">
+                        <div class="status-label">Database</div>
+                        <div class="status-value">
+                            <span class="badge bg-success">Online</span>
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">MQTT Broker</div>
+                        <div class="status-value">
+                            <span class="badge bg-success">Connesso</span>
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">SignalR Hub</div>
+                        <div class="status-value">
+                            <span class="badge bg-success">Attivo</span>
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Uptime</div>
+                        <div class="status-value">
+                            <span class="text-success">99.9%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-arrow-left"></i>
+            Indietro
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i>
+            Salva Impostazioni
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        function saveAllSettings() {
+            document.getElementById('settingsForm').submit();
+        }
+
+        function resetToDefaults() {
+            if (confirm('Sei sicuro di voler ripristinare tutte le impostazioni ai valori predefiniti?')) {
+                // Reset form to default values
+                showNotification('Impostazioni ripristinate ai valori predefiniti', 'warning');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            if (window.premiumApp && window.premiumApp.showNotification) {
+                window.premiumApp.showNotification(message, type);
+            } else {
+                alert(message);
+            }
+        }
+
+        // Show success/error messages
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                showNotification('@TempData["SuccessMessage"]', 'success');
+            });
+            </text>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                showNotification('@TempData["ErrorMessage"]', 'error');
+            });
+            </text>
+        }
+    </script>
+}
+
+@section Styles {
+    <style>
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        .status-value {
+            font-weight: 600;
+        }
+
+        .form-check-label {
+            font-weight: 500;
+        }
+
+        .card-title {
+            margin-bottom: 0;
+        }
+    </style>
+}

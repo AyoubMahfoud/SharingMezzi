@@ -1,12 +1,11 @@
 @using Microsoft.AspNetCore.Http.Extensions
 <!DOCTYPE html>
-<html lang="it" data-theme="light">
+<html lang="it">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#6366f1" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1a1f2e" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#6366f1" />
     
     <title>@ViewData["Title"] - SharingMezzi</title>
     
@@ -26,7 +25,6 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/premium-style.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/premium-dark.css" asp-append-version="true" />
     
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -57,12 +55,14 @@
                         <small class="text-muted text-uppercase fw-semibold">Principale</small>
                     </div>
                     
-                    <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 @(ViewContext.RouteData.Values["page"]?.ToString() == "/Index" ? "active bg-primary text-white" : "text-dark")" href="/">
-                        <i class="fas fa-home me-3"></i>
-                        <span>Home</span>
-                    </a>
+                    @{
+                        var authService = Context.RequestServices.GetService<SharingMezzi.Web.Services.IAuthService>();
+                        var isAuthenticated = authService?.IsAuthenticated() ?? false;
+                        var currentUser = isAuthenticated ? authService?.GetCurrentUser() : null;
+                        var isAdmin = currentUser?.Ruolo == SharingMezzi.Web.Models.UserRole.Admin;
+                    }
 
-                    @if (User.Identity?.IsAuthenticated == true)
+                    @if (isAuthenticated)
                     {
                         <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark" href="/Dashboard">
                             <i class="fas fa-chart-pie me-3"></i>
@@ -73,7 +73,7 @@
                     <a class="nav-link d-flex align-items-center py-2 px-3 rounded mb-1 text-dark" href="/Vehicles">
                         <i class="fas fa-bicycle me-3"></i>
                         <span>Mezzi</span>
-                        @if (User.Identity?.IsAuthenticated == true)
+                        @if (isAuthenticated)
                         {
                             <span class="badge bg-primary rounded-pill ms-auto">125</span>
                         }
@@ -89,7 +89,7 @@
                         <span>Parcheggi</span>
                     </a>
 
-                    @if (User.Identity?.IsAuthenticated == true)
+                    @if (isAuthenticated)
                     {
                         <div class="nav-section mt-4 mb-2">
                             <small class="text-muted text-uppercase fw-semibold">Il Mio Account</small>
@@ -111,7 +111,7 @@
                         </a>
                     }
 
-                    @if (User.Identity?.IsAuthenticated == true && (User.IsInRole("Amministratore") || User.IsInRole("Admin")))
+                    @if (isAuthenticated && isAdmin)
                     {
                         <div class="nav-section mt-4 mb-2">
                             <small class="text-muted text-uppercase fw-semibold">Amministrazione</small>
@@ -143,19 +143,15 @@
 
             <div class="sidebar-footer p-3 border-top">
                 <div class="d-flex justify-content-center gap-2">
-                    <button class="btn btn-sm btn-outline-secondary" id="themeToggle" title="Cambia tema">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    
-                    @if (User.Identity?.IsAuthenticated == true)
+                    @if (isAuthenticated)
                     {
-                        <a class="btn btn-sm btn-outline-danger" href="/Auth/Logout" title="Disconnetti">
+                        <a class="btn btn-sm btn-outline-danger" href="/Logout" title="Disconnetti">
                             <i class="fas fa-sign-out-alt"></i>
                         </a>
                     }
                     else
                     {
-                        <a class="btn btn-sm btn-outline-primary" href="/Auth/Login" title="Accedi">
+                        <a class="btn btn-sm btn-outline-primary" href="/Login" title="Accedi">
                             <i class="fas fa-sign-in-alt"></i>
                         </a>
                     }
@@ -172,33 +168,7 @@
                         <i class="fas fa-bars"></i>
                     </button>
                     
-                    <div class="navbar-nav ms-auto">
-                        @if (User.Identity?.IsAuthenticated != true)
-                        {
-                            <div class="d-flex gap-2">
-                                <a href="/Auth/Login" class="btn btn-outline-primary">
-                                    Accedi
-                                </a>
-                                <a href="/Auth/Register" class="btn btn-primary">
-                                    Registrati
-                                </a>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="dropdown">
-                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-user me-2"></i>@(User.Identity.Name ?? "Utente")
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="/Profile"><i class="fas fa-user me-2"></i>Profilo</a></li>
-                                    <li><a class="dropdown-item" href="/Settings"><i class="fas fa-cog me-2"></i>Impostazioni</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="/Auth/Logout"><i class="fas fa-sign-out-alt me-2"></i>Disconnetti</a></li>
-                                </ul>
-                            </div>
-                        }
-                    </div>
+                    @await Component.InvokeAsync("Navbar")
                 </div>
             </nav>
 
@@ -217,20 +187,30 @@
     
     @await RenderSectionAsync("Scripts", required: false)
 
-    <!-- Theme Toggle Script -->
+    <!-- Mobile sidebar toggle -->
     <script>
-        document.getElementById('themeToggle')?.addEventListener('click', function() {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            this.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-        });
-
-        // Mobile sidebar toggle
         document.getElementById('sidebarToggle')?.addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('d-none');
         });
+    </script>
+    
+    <script>
+        // Ensure server session contains the token when client-side code stores it in localStorage.
+        (function syncLocalTokenToServer() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+
+                fetch('/Auth/SetSession', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                }).catch(e => console.debug('SetSession failed', e));
+            } catch (e) {
+                console.debug('SetSession bridge error', e);
+            }
+        })();
     </script>
 </body>
 </html>
