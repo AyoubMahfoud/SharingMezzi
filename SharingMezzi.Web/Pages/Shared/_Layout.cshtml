@@ -143,13 +143,7 @@
 
             <div class="sidebar-footer p-3 border-top">
                 <div class="d-flex justify-content-center gap-2">
-                    @if (isAuthenticated)
-                    {
-                        <a class="btn btn-sm btn-outline-danger" href="/Logout" title="Disconnetti">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </a>
-                    }
-                    else
+                    @if (!isAuthenticated)
                     {
                         <a class="btn btn-sm btn-outline-primary" href="/Login" title="Accedi">
                             <i class="fas fa-sign-in-alt"></i>
