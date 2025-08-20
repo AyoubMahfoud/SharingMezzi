@@ -14,6 +14,8 @@ namespace SharingMezzi.Web.Services
         bool IsAuthenticated();
         void SetToken(string token);
         void SetCurrentUser(User user);
+        void SetRefreshToken(string refreshToken);
+        string? GetRefreshToken();
         void ClearSession();
     }
 

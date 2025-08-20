@@ -21,25 +21,24 @@ namespace SharingMezzi.Web.Services
             try
         {
             var token = _authService.GetToken();
-                var vehicles = await _apiService.GetAsync<List<VehicleDto>>("/mezzi", token);
+                var vehicles = await _apiService.GetAsync<List<dynamic>>("/api/mezzi", token);
                 
                 if (vehicles == null || !vehicles.Any())
                 {
                     return new List<Vehicle>();
                 }
 
-                return vehicles.Select(dto => new Vehicle
+                return vehicles.Select(v => new Vehicle
                 {
-                    Id = dto.Id,
-                    Modello = dto.Modello,
-                    Tipo = ParseVehicleType(dto.Tipo),
-                    IsElettrico = dto.IsElettrico,
-                    Stato = ParseVehicleStatus(dto.Stato),
-                    LivelloBatteria = dto.LivelloBatteria,
-                    TariffaPerMinuto = dto.TariffaPerMinuto,
-                    TariffaFissa = dto.TariffaFissa,
-                    UltimaManutenzione = dto.UltimaManutenzione,
-                    ParcheggioId = dto.ParcheggioId
+                    Id = (int)v.GetType().GetProperty("Id")?.GetValue(v),
+                    Modello = v.GetType().GetProperty("Modello")?.GetValue(v)?.ToString() ?? "",
+                    Tipo = ParseVehicleType(v.GetType().GetProperty("Tipo")?.GetValue(v)),
+                    IsElettrico = (bool)(v.GetType().GetProperty("IsElettrico")?.GetValue(v) ?? false),
+                    Stato = ParseVehicleStatus(v.GetType().GetProperty("Stato")?.GetValue(v)),
+                    LivelloBatteria = (int?)(v.GetType().GetProperty("LivelloBatteria")?.GetValue(v)),
+                    TariffaPerMinuto = (decimal)(v.GetType().GetProperty("TariffaPerMinuto")?.GetValue(v) ?? 0),
+                    TariffaFissa = (decimal)(v.GetType().GetProperty("TariffaFissa")?.GetValue(v) ?? 0),
+                    ParcheggioId = (int?)(v.GetType().GetProperty("ParcheggioAttualeId")?.GetValue(v))
                 }).ToList();
             }
             catch (Exception ex)
@@ -64,22 +63,21 @@ namespace SharingMezzi.Web.Services
             try
         {
             var token = _authService.GetToken();
-                var vehicleDto = await _apiService.GetAsync<VehicleDto>($"/mezzi/{id}", token);
+                var vehicleDto = await _apiService.GetAsync<dynamic>($"/api/mezzi/{id}", token);
                 
                 if (vehicleDto == null) return null;
 
                 return new Vehicle
                 {
-                    Id = vehicleDto.Id,
-                    Modello = vehicleDto.Modello,
-                    Tipo = ParseVehicleType(vehicleDto.Tipo),
-                    IsElettrico = vehicleDto.IsElettrico,
-                    Stato = ParseVehicleStatus(vehicleDto.Stato),
-                    LivelloBatteria = vehicleDto.LivelloBatteria,
-                    TariffaPerMinuto = vehicleDto.TariffaPerMinuto,
-                    TariffaFissa = vehicleDto.TariffaFissa,
-                    UltimaManutenzione = vehicleDto.UltimaManutenzione,
-                    ParcheggioId = vehicleDto.ParcheggioId
+                    Id = (int)vehicleDto.GetType().GetProperty("Id")?.GetValue(vehicleDto),
+                    Modello = vehicleDto.GetType().GetProperty("Modello")?.GetValue(vehicleDto)?.ToString() ?? "",
+                    Tipo = ParseVehicleType(vehicleDto.GetType().GetProperty("Tipo")?.GetValue(vehicleDto)),
+                    IsElettrico = (bool)(vehicleDto.GetType().GetProperty("IsElettrico")?.GetValue(vehicleDto) ?? false),
+                    Stato = ParseVehicleStatus(vehicleDto.GetType().GetProperty("Stato")?.GetValue(vehicleDto)),
+                    LivelloBatteria = (int?)(vehicleDto.GetType().GetProperty("LivelloBatteria")?.GetValue(vehicleDto)),
+                    TariffaPerMinuto = (decimal)(vehicleDto.GetType().GetProperty("TariffaPerMinuto")?.GetValue(vehicleDto) ?? 0),
+                    TariffaFissa = (decimal)(vehicleDto.GetType().GetProperty("TariffaFissa")?.GetValue(vehicleDto) ?? 0),
+                    ParcheggioId = (int?)(vehicleDto.GetType().GetProperty("ParcheggioAttualeId")?.GetValue(vehicleDto))
                 };
             }
             catch (Exception ex)
@@ -93,30 +91,46 @@ namespace SharingMezzi.Web.Services
         {
             try
             {
-                // Usa l'endpoint pubblico per i mezzi disponibili
-                var vehicles = await _apiService.GetAsync<List<dynamic>>("/public/mezzi/disponibili");
+                _logger.LogInformation("🔍 DEBUG: Chiamata API per mezzi disponibili");
+                
+                // Ottieni il token di autenticazione
+                var token = _authService.GetToken();
+                if (string.IsNullOrEmpty(token))
+                {
+                    _logger.LogWarning("⚠️ DEBUG: Token mancante, impossibile recuperare mezzi disponibili");
+                    return new List<Vehicle>();
+                }
+                
+                // Usa l'endpoint autenticato per i mezzi disponibili
+                var vehicles = await _apiService.GetAsync<List<dynamic>>("/api/mezzi/disponibili", token);
+                
+                _logger.LogInformation($"📡 DEBUG: API response per mezzi disponibili: {vehicles?.Count ?? 0} mezzi");
                 
                 if (vehicles == null || !vehicles.Any())
                 {
+                    _logger.LogWarning("⚠️ DEBUG: Nessun mezzo disponibile dall'API");
                     return new List<Vehicle>();
                 }
 
-                return vehicles.Select(v => new Vehicle
+                var result = vehicles.Select(v => new Vehicle
                 {
                     Id = (int)v.GetType().GetProperty("Id")?.GetValue(v),
                     Modello = v.GetType().GetProperty("Modello")?.GetValue(v)?.ToString() ?? "",
-                    Tipo = ParseVehicleType(v.GetType().GetProperty("Tipo")?.GetValue(v)?.ToString() ?? ""),
+                    Tipo = ParseVehicleType(v.GetType().GetProperty("Tipo")?.GetValue(v)),
                     IsElettrico = (bool)(v.GetType().GetProperty("IsElettrico")?.GetValue(v) ?? false),
-                    Stato = ParseVehicleStatus(v.GetType().GetProperty("Stato")?.GetValue(v)?.ToString() ?? ""),
+                    Stato = ParseVehicleStatus(v.GetType().GetProperty("Stato")?.GetValue(v)),
                     LivelloBatteria = (int?)(v.GetType().GetProperty("LivelloBatteria")?.GetValue(v)),
                     TariffaPerMinuto = (decimal)(v.GetType().GetProperty("TariffaPerMinuto")?.GetValue(v) ?? 0),
                     TariffaFissa = (decimal)(v.GetType().GetProperty("TariffaFissa")?.GetValue(v) ?? 0),
                     ParcheggioId = (int?)(v.GetType().GetProperty("ParcheggioAttualeId")?.GetValue(v))
                 }).ToList();
+                
+                _logger.LogInformation($"✅ DEBUG: Convertiti {result.Count} mezzi dal formato API");
+                return result;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting available vehicles: {Error}", ex.Message);
+                _logger.LogError(ex, "❌ DEBUG: Errore nel recupero mezzi disponibili: {Error}", ex.Message);
                 return new List<Vehicle>();
             }
         }
@@ -126,7 +140,7 @@ namespace SharingMezzi.Web.Services
             try
         {
             var token = _authService.GetToken();
-                var response = await _apiService.PostAsync<object>($"/mezzi/{vehicleId}/unlock", new { }, token);
+                var response = await _apiService.PostAsync<object>($"/api/mezzi/{vehicleId}/unlock", new { }, token);
             return response != null;
             }
             catch (Exception ex)
@@ -141,8 +155,7 @@ namespace SharingMezzi.Web.Services
             try
             {
                 var token = _authService.GetToken();
-                var request = new { VehicleId = vehicleId, Description = description };
-                var response = await _apiService.PostAsync<object>("/admin/vehicles/maintenance", request, token);
+                var response = await _apiService.PostAsync<object>($"/api/admin/vehicles/{vehicleId}/repair", new { }, token);
                 return response != null;
             }
             catch (Exception ex)
@@ -155,10 +168,10 @@ namespace SharingMezzi.Web.Services
         public async Task<bool> SetMaintenanceAsync(int vehicleId)
         {
             try
-            {
-                var token = _authService.GetToken();
+        {
+            var token = _authService.GetToken();
                 var response = await _apiService.PostAsync<object>($"/admin/vehicles/{vehicleId}/maintenance", new { }, token);
-                return response != null;
+            return response != null;
             }
             catch (Exception ex)
             {
@@ -170,10 +183,10 @@ namespace SharingMezzi.Web.Services
         public async Task<bool> SetAvailableAsync(int vehicleId)
         {
             try
-        {
-            var token = _authService.GetToken();
+            {
+                var token = _authService.GetToken();
                 var response = await _apiService.PostAsync<object>($"/admin/vehicles/{vehicleId}/repair", new { }, token);
-            return response != null;
+                return response != null;
             }
             catch (Exception ex)
             {
@@ -197,9 +210,19 @@ namespace SharingMezzi.Web.Services
             }
         }
 
-        private static VehicleType ParseVehicleType(string typeString)
+        private static VehicleType ParseVehicleType(object typeValue)
         {
-            return typeString?.ToLower() switch
+            if (typeValue == null) return VehicleType.Bicicletta;
+            
+            // Se è già un numero, convertilo direttamente
+            if (int.TryParse(typeValue.ToString(), out int numericType))
+            {
+                return (VehicleType)numericType;
+            }
+            
+            // Se è una stringa, parsala
+            var typeString = typeValue.ToString()?.ToLower();
+            return typeString switch
             {
                 "bicicletta" => VehicleType.Bicicletta,
                 "scooter" => VehicleType.Scooter,
@@ -210,9 +233,19 @@ namespace SharingMezzi.Web.Services
             };
         }
 
-        private static VehicleStatus ParseVehicleStatus(string statusString)
+        private static VehicleStatus ParseVehicleStatus(object statusValue)
         {
-            return statusString?.ToLower() switch
+            if (statusValue == null) return VehicleStatus.Disponibile;
+            
+            // Se è già un numero, convertilo direttamente
+            if (int.TryParse(statusValue.ToString(), out int numericStatus))
+            {
+                return (VehicleStatus)numericStatus;
+            }
+            
+            // Se è una stringa, parsala
+            var statusString = statusValue.ToString()?.ToLower();
+            return statusString switch
             {
                 "disponibile" => VehicleStatus.Disponibile,
                 "inuso" or "occupato" => VehicleStatus.InUso,
@@ -341,12 +374,14 @@ namespace SharingMezzi.Web.Services
             var token = _authService.GetToken();
                 var updateRequest = new
                 {
-                    Nome = user.Nome,
-                    Cognome = user.Cognome,
-                    Telefono = user.Telefono
+                    user.Nome,
+                    user.Cognome,
+                    user.Email,
+                    user.Telefono,
+                    user.Ruolo
                 };
 
-                var response = await _apiService.PutAsync<object>("/user/profile", updateRequest, token);
+                var response = await _apiService.PutAsync<object>($"/api/admin/users/{id}", updateRequest, token);
             return response != null;
             }
             catch (Exception ex)
@@ -362,7 +397,7 @@ namespace SharingMezzi.Web.Services
         {
             var token = _authService.GetToken();
                 var suspendRequest = new { Motivo = reason };
-                var response = await _apiService.PostAsync<object>($"/admin/users/{id}/suspend", suspendRequest, token);
+                var response = await _apiService.PostAsync<object>($"/api/admin/users/{id}/suspend", suspendRequest, token);
             return response != null;
             }
             catch (Exception ex)
@@ -372,18 +407,18 @@ namespace SharingMezzi.Web.Services
             }
         }
 
-        public async Task<bool> ReactivateUserAsync(int id)
+        public async Task<bool> UnblockUserAsync(int id)
         {
             try
         {
             var token = _authService.GetToken();
                 var unblockRequest = new { Note = "Riattivato dall'amministratore" };
-                var response = await _apiService.PostAsync<object>($"/admin/users/{id}/unblock", unblockRequest, token);
+                var response = await _apiService.PostAsync<object>($"/api/admin/users/{id}/unblock", unblockRequest, token);
             return response != null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error reactivating user {UserId}", id);
+                _logger.LogError(ex, "Error unblocking user {UserId}", id);
                 return false;
             }
         }
@@ -405,9 +440,9 @@ namespace SharingMezzi.Web.Services
         public async Task<UserStatistics?> GetUserStatisticsAsync(int userId)
         {
             try
-        {
-            var token = _authService.GetToken();
-                var stats = await _apiService.GetAsync<UserStatisticsDto>($"/user/{userId}/statistiche", token);
+            {
+                var token = _authService.GetToken();
+                var stats = await _apiService.GetAsync<UserStatisticsDto>($"/api/user/{userId}/statistiche", token);
                 
                 if (stats == null) return null;
 
@@ -427,6 +462,22 @@ namespace SharingMezzi.Web.Services
             {
                 _logger.LogError(ex, "Error getting user statistics {UserId}", userId);
                 return null;
+            }
+        }
+
+        public async Task<bool> ReactivateUserAsync(int id)
+        {
+            try
+        {
+            var token = _authService.GetToken();
+                var unblockRequest = new { Note = "Riattivato dall'amministratore" };
+                var response = await _apiService.PostAsync<object>($"/api/admin/users/{id}/unblock", unblockRequest, token);
+                return response != null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reactivating user {UserId}", id);
+                return false;
             }
         }
 
@@ -486,7 +537,7 @@ namespace SharingMezzi.Web.Services
             try
         {
             var token = _authService.GetToken();
-                var recharges = await _apiService.GetAsync<List<RechargeDto>>($"/user/{userId}/ricariche", token);
+                var recharges = await _apiService.GetAsync<List<RechargeDto>>($"/api/user/{userId}/ricariche", token);
                 
                 if (recharges == null || !recharges.Any())
                 {
@@ -525,7 +576,7 @@ namespace SharingMezzi.Web.Services
                 };
 
                 var response = await _apiService.PostAsync<object>("/user/ricarica-credito", rechargeRequest, token);
-                return response != null;
+            return response != null;
             }
             catch (Exception ex)
             {
@@ -555,7 +606,7 @@ namespace SharingMezzi.Web.Services
             try
         {
             var token = _authService.GetToken();
-                var trips = await _apiService.GetAsync<List<TripDto>>($"/corse/utente/{userId}", token);
+                var trips = await _apiService.GetAsync<List<TripDto>>($"/api/corse/utente/{userId}", token);
                 
                 if (trips == null || !trips.Any())
                 {

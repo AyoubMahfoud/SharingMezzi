@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using SharingMezzi.Web.Models;
 using SharingMezzi.Web.Services;
+using SharingMezzi.Web.Models;
 
 namespace SharingMezzi.Web.Pages
 {
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public class TripsModel : PageModel
     {
         private readonly IAuthService _authService;

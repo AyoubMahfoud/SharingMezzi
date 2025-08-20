@@ -3,57 +3,101 @@
 @using SharingMezzi.Web.Models
 @{
     ViewData["Title"] = "Le mie corse";
+    Layout = "_Layout";
 }
 
-<div class="page-header">
-    <h1 class="page-title">Le mie corse</h1>
-    <p class="page-subtitle">Visualizza lo storico delle tue corse e gli spostamenti</p>
+<!-- Hero Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="hero-section bg-primary text-white rounded p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-6 fw-bold mb-2">
+                        <i class="fas fa-route me-3"></i>Le mie corse
+                    </h1>
+                    <p class="lead mb-0">Visualizza lo storico delle tue corse e gli spostamenti</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-light" onclick="refreshTrips()">
+                        <i class="fas fa-sync-alt me-2"></i>Aggiorna
+                    </button>
+                    <button class="btn btn-outline-light" onclick="exportTrips()">
+                        <i class="fas fa-download me-2"></i>Esporta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Trip Statistics -->
+<!-- Stats Cards -->
 <div class="row mb-4">
-    <div class="col-md-3">
-        <div class="dashboard-card">
-            <div class="dashboard-card-icon bg-primary text-white">
-                <i class="fas fa-route"></i>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-primary mb-2">
+                    <i class="fas fa-route fa-2x"></i>
+                </div>
+                <h3 class="card-title text-primary">@Model.Trips.Count</h3>
+                <p class="card-text text-muted">Corse Totali</p>
             </div>
-            <div class="dashboard-card-title">Corse Totali</div>
-            <div class="dashboard-card-value">@Model.Trips.Count</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="dashboard-card">
-            <div class="dashboard-card-icon bg-success text-white">
-                <i class="fas fa-clock"></i>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-success mb-2">
+                    <i class="fas fa-clock fa-2x"></i>
+                </div>
+                <h3 class="card-title text-success">@Model.TotalMinutes</h3>
+                <p class="card-text text-muted">Minuti Totali</p>
             </div>
-            <div class="dashboard-card-title">Tempo Totale</div>
-            <div class="dashboard-card-value">@Model.TotalMinutes min</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="dashboard-card">
-            <div class="dashboard-card-icon bg-warning text-white">
-                <i class="fas fa-euro-sign"></i>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-warning mb-2">
+                    <i class="fas fa-euro-sign fa-2x"></i>
+                </div>
+                <h3 class="card-title text-warning">€@Model.TotalCost.ToString("F2")</h3>
+                <p class="card-text text-muted">Spesa Totale</p>
             </div>
-            <div class="dashboard-card-title">Spesa Totale</div>
-            <div class="dashboard-card-value">€@Model.TotalCost</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="dashboard-card">
-            <div class="dashboard-card-icon bg-info text-white">
-                <i class="fas fa-leaf"></i>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-info mb-2">
+                    <i class="fas fa-leaf fa-2x"></i>
+                </div>
+                <h3 class="card-title text-info">@Model.TotalEcoPoints</h3>
+                <p class="card-text text-muted">Punti Eco</p>
             </div>
-            <div class="dashboard-card-title">Punti Eco</div>
-            <div class="dashboard-card-value">@Model.TotalEcoPoints</div>
         </div>
     </div>
 </div>
+
+<!-- Error Alert -->
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Attenzione:</strong> @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
 
 <!-- Trip Filters -->
-<div class="card mb-4">
+<div class="card mb-4 border-0 shadow-sm">
     <div class="card-body">
-        <div class="row align-items-center">
+        <h5 class="card-title mb-3">
+            <i class="fas fa-filter me-2"></i>Filtri
+        </h5>
+        <div class="row align-items-end">
             <div class="col-md-3">
                 <label for="tripStatus" class="form-label">Stato</label>
                 <select id="tripStatus" class="form-control" onchange="filterTrips()">
@@ -68,8 +112,10 @@
                 <select id="vehicleType" class="form-control" onchange="filterTrips()">
                     <option value="">Tutti</option>
                     <option value="0">Biciclette</option>
-                    <option value="1">E-Bike</option>
-                    <option value="2">Scooter</option>
+                    <option value="4">E-Bike</option>
+                    <option value="1">Scooter</option>
+                    <option value="2">Auto</option>
+                    <option value="3">Monopattino</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -82,37 +128,38 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary" onclick="refreshTrips()">
-                        <i class="fas fa-sync-alt"></i> Aggiorna
-                    </button>
-                    <button class="btn btn-outline-success" onclick="exportTrips()">
-                        <i class="fas fa-download"></i> Esporta
-                    </button>
-                </div>
+                <button class="btn btn-primary w-100" onclick="applyFilters()">
+                    <i class="fas fa-search me-2"></i>Applica Filtri
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Trips List -->
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-list text-primary"></i>
-            Storico Corse
-        </h5>
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>Storico Corse
+            </h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times me-1"></i>Pulisci
+                </button>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        @if (Model.Trips.Any())
+    
+    <div class="card-body p-0">
+        @if (Model.Trips?.Any() == true)
         {
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <th>Data/Ora</th>
+                            <th>Data</th>
                             <th>Mezzo</th>
-                            <th>Percorso</th>
                             <th>Durata</th>
                             <th>Costo</th>
                             <th>Stato</th>
@@ -120,79 +167,55 @@
                             <th>Azioni</th>
                         </tr>
                     </thead>
-                    <tbody id="tripsTableBody">
+                    <tbody id="tripsTable">
                         @foreach (var trip in Model.Trips)
                         {
                             <tr class="trip-row" 
-                                data-status="@((int)trip.Stato)" 
-                                data-vehicle-type="@((int)(trip.Mezzo?.Tipo ?? VehicleType.Bicicletta))" 
+                                data-status="@((int)trip.Stato)"
+                                data-vehicle-type="@((int)(trip.Mezzo?.Tipo ?? VehicleType.Bicicletta))"
                                 data-date="@trip.Inizio.ToString("yyyy-MM-dd")">
                                 <td>
-                                    <div class="fw-bold">@trip.Inizio.ToString("dd/MM/yyyy")</div>
-                                    <small class="text-muted">@trip.Inizio.ToString("HH:mm")</small>
-                                </td>
-                                <td>
-                                    @if (trip.Mezzo != null)
-                                    {
-                                        var vehicleIcon = trip.Mezzo.Tipo switch
-                                        {
-                                            VehicleType.Bicicletta => "fas fa-bicycle",
-                                            VehicleType.EBike => "fas fa-bicycle",
-                                            VehicleType.Scooter => "fas fa-motorcycle",
-                                            _ => "fas fa-bicycle"
-                                        };
-                                        
-                                        <i class="@vehicleIcon me-1"></i>
-                                        <div class="fw-bold">@trip.Mezzo.Modello</div>
-                                        <small class="text-muted">@trip.Mezzo.Tipo</small>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="route-info">
-                                        <div class="fw-bold">
-                                            <i class="fas fa-map-marker-alt text-success me-1"></i>
-                                            @trip.ParcheggioPartenza?.Nome
-                                        </div>
-                                        @if (trip.ParcheggioDestinazione != null)
-                                        {
-                                            <div class="mt-1">
-                                                <i class="fas fa-map-marker-alt text-danger me-1"></i>
-                                                @trip.ParcheggioDestinazione.Nome
-                                            </div>
-                                        }
-                                        else if (trip.Stato == TripStatus.InCorso)
-                                        {
-                                            <small class="text-muted">In corso...</small>
-                                        }
+                                    <div class="d-flex flex-column">
+                                        <strong>@trip.Inizio.ToString("dd/MM/yyyy")</strong>
+                                        <small class="text-muted">@trip.Inizio.ToString("HH:mm")</small>
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="fw-bold">@trip.DurataMinuti min</div>
-                                    @if (trip.Fine.HasValue)
-                                    {
-                                        <small class="text-muted">@trip.Fine.Value.ToString("HH:mm")</small>
-                                    }
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-@(trip.Mezzo?.Tipo == VehicleType.Bicicletta ? "bicycle" : trip.Mezzo?.Tipo == VehicleType.Scooter ? "motorcycle" : trip.Mezzo?.Tipo == VehicleType.EBike ? "bicycle" : "car") me-2 text-primary"></i>
+                                        <span>@(trip.Mezzo?.Modello ?? "N/A")</span>
+                                    </div>
                                 </td>
                                 <td>
-                                    <div class="fw-bold text-primary">€@trip.CostoTotale</div>
+                                    <span class="badge bg-info">@trip.DurataMinuti min</span>
+                                </td>
+                                <td>
+                                    <strong class="text-success">€@trip.CostoTotale.ToString("F2")</strong>
                                 </td>
                                 <td>
                                     @{
                                         var statusClass = trip.Stato switch
                                         {
-                                            TripStatus.InCorso => "badge bg-warning",
-                                            TripStatus.Completata => "badge bg-success",
-                                            TripStatus.Annullata => "badge bg-secondary",
-                                            _ => "badge bg-secondary"
+                                            TripStatus.InCorso => "bg-warning",
+                                            TripStatus.Completata => "bg-success",
+                                            TripStatus.Annullata => "bg-danger",
+                                            _ => "bg-secondary"
+                                        };
+                                        var statusText = trip.Stato switch
+                                        {
+                                            TripStatus.InCorso => "In corso",
+                                            TripStatus.Completata => "Completato",
+                                            TripStatus.Annullata => "Annullato",
+                                            _ => "Sconosciuto"
                                         };
                                     }
-                                    <span class="@statusClass">@trip.Stato</span>
+                                    <span class="badge @statusClass">@statusText</span>
                                 </td>
                                 <td>
-                                    @if (trip.PuntiEcoAssegnati.HasValue && trip.PuntiEcoAssegnati > 0)
+                                    @if (trip.PuntiEcoAssegnati.HasValue)
                                     {
                                         <span class="badge bg-success">
-                                            <i class="fas fa-leaf"></i> @trip.PuntiEcoAssegnati
+                                            <i class="fas fa-leaf me-1"></i>@trip.PuntiEcoAssegnati
                                         </span>
                                     }
                                     else
@@ -201,13 +224,13 @@
                                     }
                                 </td>
                                 <td>
-                                    <div class="btn-group">
-                                        <button class="btn btn-outline-primary btn-sm" onclick="showTripDetails(@trip.Id)">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="viewTripDetails(@trip.Id)" title="Dettagli">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         @if (trip.Stato == TripStatus.InCorso)
                                         {
-                                            <button class="btn btn-outline-danger btn-sm" onclick="endTrip(@trip.Id)">
+                                            <button class="btn btn-outline-warning" onclick="endTrip(@trip.Id)" title="Termina">
                                                 <i class="fas fa-stop"></i>
                                             </button>
                                         }
@@ -223,10 +246,10 @@
         {
             <div class="text-center py-5">
                 <i class="fas fa-route fa-3x text-muted mb-3"></i>
-                <h4>Nessuna corsa effettuata</h4>
-                <p class="text-muted">Quando inizierai a usare i nostri mezzi, qui apparirà lo storico delle tue corse</p>
+                <h5 class="text-muted">Nessuna corsa trovata</h5>
+                <p class="text-muted">Inizia a usare i nostri servizi per vedere qui le tue corse</p>
                 <a href="/Vehicles" class="btn btn-primary">
-                    <i class="fas fa-bicycle"></i> Inizia la tua prima corsa
+                    <i class="fas fa-bicycle me-2"></i>Trova un mezzo
                 </a>
             </div>
         }
@@ -238,11 +261,13 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Dettagli Corsa</h5>
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>Dettagli Corsa
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="tripDetailsContent">
-                <!-- Trip details will be loaded here -->
+                <!-- Content will be loaded dynamically -->
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
@@ -253,135 +278,92 @@
 
 @section Scripts {
     <script>
+        // Filter functionality
         function filterTrips() {
             const statusFilter = document.getElementById('tripStatus').value;
-            const vehicleTypeFilter = document.getElementById('vehicleType').value;
+            const vehicleFilter = document.getElementById('vehicleType').value;
             const dateFilter = document.getElementById('dateRange').value;
             
             const rows = document.querySelectorAll('.trip-row');
             
             rows.forEach(row => {
-                let show = true;
+                const status = row.dataset.status;
+                const vehicleType = row.dataset.vehicleType;
+                const date = row.dataset.date;
                 
-                if (statusFilter && row.getAttribute('data-status') !== statusFilter) {
-                    show = false;
+                let showRow = true;
+                
+                // Status filter
+                if (statusFilter && status !== statusFilter) {
+                    showRow = false;
                 }
                 
-                if (vehicleTypeFilter && row.getAttribute('data-vehicle-type') !== vehicleTypeFilter) {
-                    show = false;
+                // Vehicle type filter
+                if (vehicleFilter && vehicleType !== vehicleFilter) {
+                    showRow = false;
                 }
                 
+                // Date filter
                 if (dateFilter) {
-                    const rowDate = new Date(row.getAttribute('data-date'));
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
+                    const today = new Date().toISOString().split('T')[0];
+                    const tripDate = new Date(date);
                     
-                    switch(dateFilter) {
+                    switch (dateFilter) {
                         case 'today':
-                            if (rowDate < today) show = false;
+                            if (date !== today) showRow = false;
                             break;
                         case 'week':
-                            const weekAgo = new Date(today);
+                            const weekAgo = new Date();
                             weekAgo.setDate(weekAgo.getDate() - 7);
-                            if (rowDate < weekAgo) show = false;
+                            if (tripDate < weekAgo) showRow = false;
                             break;
                         case 'month':
-                            const monthAgo = new Date(today);
+                            const monthAgo = new Date();
                             monthAgo.setMonth(monthAgo.getMonth() - 1);
-                            if (rowDate < monthAgo) show = false;
+                            if (tripDate < monthAgo) showRow = false;
                             break;
                     }
                 }
                 
-                row.style.display = show ? 'table-row' : 'none';
+                row.style.display = showRow ? 'table-row' : 'none';
             });
         }
-
+        
+        function applyFilters() {
+            filterTrips();
+        }
+        
+        function clearFilters() {
+            document.getElementById('tripStatus').value = '';
+            document.getElementById('vehicleType').value = '';
+            document.getElementById('dateRange').value = '';
+            filterTrips();
+        }
+        
         function refreshTrips() {
-            window.location.reload();
+            location.reload();
         }
-
+        
         function exportTrips() {
-            // This would generate and download a CSV/PDF report
-            app.showAlert('Funzione di esportazione non ancora implementata', 'info');
+            // TODO: Implement export functionality
+            alert('Funzionalità di esportazione in sviluppo');
         }
-
-        async function showTripDetails(tripId) {
-            const modal = new bootstrap.Modal(document.getElementById('tripDetailsModal'));
-            const content = document.getElementById('tripDetailsContent');
-            
-            content.innerHTML = '<div class="text-center"><div class="spinner"></div> Caricamento...</div>';
-            modal.show();
-
-            try {
-                const response = await fetch(`/api/trips/${tripId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${app.getToken()}`
-                    }
-                });
-
-                if (response.ok) {
-                    const trip = await response.json();
-                    content.innerHTML = `
-                        <div class="trip-details">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6>Informazioni Generali</h6>
-                                    <p><strong>Data inizio:</strong> ${new Date(trip.inizio).toLocaleString()}</p>
-                                    ${trip.fine ? `<p><strong>Data fine:</strong> ${new Date(trip.fine).toLocaleString()}</p>` : ''}
-                                    <p><strong>Durata:</strong> ${trip.durataMinuti} minuti</p>
-                                    <p><strong>Costo:</strong> €${trip.costoTotale}</p>
-                                    <p><strong>Stato:</strong> ${trip.stato}</p>
-                                    ${trip.puntiEcoAssegnati ? `<p><strong>Punti Eco:</strong> ${trip.puntiEcoAssegnati}</p>` : ''}
-                                </div>
-                                <div class="col-md-6">
-                                    <h6>Mezzo Utilizzato</h6>
-                                    <p><strong>Modello:</strong> ${trip.mezzo?.modello || 'N/A'}</p>
-                                    <p><strong>Tipo:</strong> ${trip.mezzo?.tipo || 'N/A'}</p>
-                                    <p><strong>Elettrico:</strong> ${trip.mezzo?.isElettrico ? 'Sì' : 'No'}</p>
-                                    
-                                    <h6>Percorso</h6>
-                                    <p><strong>Partenza:</strong> ${trip.parcheggioPartenza?.nome || 'N/A'}</p>
-                                    ${trip.parcheggioDestinazione ? `<p><strong>Destinazione:</strong> ${trip.parcheggioDestinazione.nome}</p>` : '<p><strong>Destinazione:</strong> In corso</p>'}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    content.innerHTML = '<div class="alert alert-danger">Errore nel caricamento dei dettagli</div>';
-                }
-            } catch (error) {
-                console.error('Error loading trip details:', error);
-                content.innerHTML = '<div class="alert alert-danger">Errore di connessione</div>';
+        
+        function viewTripDetails(tripId) {
+            // TODO: Implement trip details view
+            alert('Funzionalità di visualizzazione dettagli in sviluppo');
+        }
+        
+        function endTrip(tripId) {
+            if (confirm('Sei sicuro di voler terminare questa corsa?')) {
+                // TODO: Implement trip ending
+                alert('Funzionalità di terminazione corsa in sviluppo');
             }
         }
-
-        async function endTrip(tripId) {
-            if (!confirm('Sei sicuro di voler terminare questa corsa?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/trips/${tripId}/end`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${app.getToken()}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    app.showAlert('Corsa terminata con successo!', 'success');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
-                } else {
-                    app.showAlert('Errore durante la terminazione della corsa', 'danger');
-                }
-            } catch (error) {
-                console.error('Error ending trip:', error);
-                app.showAlert('Errore di connessione', 'danger');
-            }
-        }
+        
+        // Initialize filters on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default filters if needed
+        });
     </script>
 }

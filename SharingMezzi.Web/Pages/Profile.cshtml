@@ -21,7 +21,7 @@
             </button>
             <button class="btn btn-primary" onclick="saveAllChanges()">
                 <i class="fas fa-save me-2"></i>Salva Tutto
-            </button>
+        </button>
         </div>
     </div>
 </div>
@@ -33,7 +33,7 @@
         <i class="fas fa-check-circle me-2"></i>
         @Model.SuccessMessage
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+                    </div>
 }
 
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -42,7 +42,7 @@
         <i class="fas fa-exclamation-triangle me-2"></i>
         @Model.ErrorMessage
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+                </div>
 }
 
 <!-- Profile Content -->
@@ -53,7 +53,7 @@
             <div class="card-header-section">
                 <h3><i class="fas fa-user text-primary me-2"></i>Informazioni Personali</h3>
                 <p class="text-muted mb-0">Aggiorna i tuoi dati personali</p>
-            </div>
+                    </div>
             
             <form method="post" asp-page-handler="UpdateProfile" class="mt-4">
                 <div class="row g-3">
@@ -79,7 +79,7 @@
                         </label>
                         <input asp-for="ProfileUpdate.Email" type="email" class="form-control" placeholder="La tua email">
                         <span asp-validation-for="ProfileUpdate.Email" class="text-danger small"></span>
-                    </div>
+                </div>
                     
                     <div class="col-md-6">
                         <label asp-for="ProfileUpdate.Telefono" class="form-label">
@@ -87,23 +87,23 @@
                         </label>
                         <input asp-for="ProfileUpdate.Telefono" type="tel" class="form-control" placeholder="Il tuo telefono">
                         <span asp-validation-for="ProfileUpdate.Telefono" class="text-danger small"></span>
-                    </div>
-                </div>
-                
+            </div>
+        </div>
+
                 <div class="mt-4">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-2"></i>Aggiorna Profilo
                     </button>
-                </div>
+            </div>
             </form>
-        </div>
+                </div>
 
         <!-- Change Password Card -->
         <div class="content-card mt-4">
             <div class="card-header-section">
                 <h3><i class="fas fa-lock text-primary me-2"></i>Cambio Password</h3>
                 <p class="text-muted mb-0">Modifica la tua password di accesso</p>
-            </div>
+                </div>
             
             <form method="post" asp-page-handler="ChangePassword" class="mt-4">
                 <div class="row g-3">
@@ -113,33 +113,33 @@
                         </label>
                         <input asp-for="PasswordChange.CurrentPassword" type="password" class="form-control" placeholder="Inserisci la password attuale">
                         <span asp-validation-for="PasswordChange.CurrentPassword" class="text-danger small"></span>
-                    </div>
-                    
-                    <div class="col-md-6">
+    </div>
+
+                        <div class="col-md-6">
                         <label asp-for="PasswordChange.NewPassword" class="form-label">
                             <i class="fas fa-lock me-1"></i>Nuova Password
                         </label>
                         <input asp-for="PasswordChange.NewPassword" type="password" class="form-control" placeholder="Inserisci la nuova password">
                         <span asp-validation-for="PasswordChange.NewPassword" class="text-danger small"></span>
-                    </div>
+                            </div>
                     
-                    <div class="col-md-6">
+                        <div class="col-md-6">
                         <label asp-for="PasswordChange.ConfirmPassword" class="form-label">
                             <i class="fas fa-lock me-1"></i>Conferma Password
                         </label>
                         <input asp-for="PasswordChange.ConfirmPassword" type="password" class="form-control" placeholder="Conferma la nuova password">
                         <span asp-validation-for="PasswordChange.ConfirmPassword" class="text-danger small"></span>
-                    </div>
-                </div>
+                            </div>
+                        </div>
                 
                 <div class="mt-4">
                     <button type="submit" class="btn btn-warning">
                         <i class="fas fa-key me-2"></i>Cambia Password
                     </button>
-                </div>
-            </form>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
 
     <!-- Profile Stats & Info -->
     <div class="col-lg-4">
@@ -162,13 +162,13 @@
                     <i class="fas fa-chart-line me-2"></i>Vedi Attività
                 </button>
             </div>
-        </div>
+                    </div>
 
         <!-- Account Stats Card -->
         <div class="content-card mt-4">
             <div class="card-header-section">
                 <h5><i class="fas fa-chart-pie text-primary me-2"></i>Statistiche Account</h5>
-            </div>
+                    </div>
             
             <div class="stats-grid">
                 <div class="stat-item">
@@ -178,9 +178,9 @@
                     <div class="stat-content">
                         <div class="stat-value">€@(Model.CurrentUser?.Credito.ToString("F2") ?? "0.00")</div>
                         <div class="stat-label">Credito Attuale</div>
-                    </div>
-                </div>
-                
+            </div>
+        </div>
+
                 <div class="stat-item">
                     <div class="stat-icon bg-success">
                         <i class="fas fa-leaf text-white"></i>
@@ -189,29 +189,29 @@
                         <div class="stat-value">@(Model.CurrentUser?.PuntiEco ?? 0)</div>
                         <div class="stat-label">Punti Eco</div>
                     </div>
-                </div>
+            </div>
                 
-                <div class="stat-item">
+                        <div class="stat-item">
                     <div class="stat-icon bg-info">
                         <i class="fas fa-calendar-alt text-white"></i>
                     </div>
                     <div class="stat-content">
                         <div class="stat-value">@(Model.CurrentUser?.DataRegistrazione.ToString("dd/MM/yyyy") ?? "N/A")</div>
                         <div class="stat-label">Data Registrazione</div>
+                        </div>
                     </div>
-                </div>
                 
-                <div class="stat-item">
+                        <div class="stat-item">
                     <div class="stat-icon bg-warning">
                         <i class="fas fa-shield-alt text-white"></i>
                     </div>
                     <div class="stat-content">
                         <div class="stat-value">@(Model.CurrentUser?.Ruolo.ToString() ?? "Utente")</div>
                         <div class="stat-label">Ruolo</div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
+                        </div>
+                    </div>
 
         <!-- Quick Actions Card -->
         <div class="content-card mt-4">
@@ -232,9 +232,9 @@
                 <button class="btn btn-outline-danger btn-sm" onclick="deleteAccount()">
                     <i class="fas fa-trash me-2"></i>Elimina Account
                 </button>
-            </div>
-        </div>
-    </div>
+                        </div>
+                    </div>
+                </div>
 </div>
 
 <!-- Delete Account Modal -->

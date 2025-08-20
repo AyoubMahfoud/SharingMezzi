@@ -1,68 +1,243 @@
 @page
 @model SharingMezzi.Web.Pages.Admin.ParkingsModel
+@using static SharingMezzi.Web.Models.SlotStatus
 @{
     ViewData["Title"] = "Gestione Parcheggi";
+    Layout = "_Layout";
 }
 
-<div class="page-header">
+<!-- Hero Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="hero-section bg-primary text-white rounded p-4">
     <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h1 class="page-title">Gestione Parcheggi</h1>
-            <p class="text-muted">Aggiungi, modifica o rimuovi parcheggi</p>
+                    <h1 class="display-6 fw-bold mb-2">
+                        <i class="fas fa-parking me-3"></i>Gestione Parcheggi
+                    </h1>
+                    <p class="lead mb-0">Amministra i parcheggi del sistema di sharing</p>
         </div>
-        <button class="btn btn-primary" onclick="openCreateParkingModal()">
-            <i class="fas fa-plus me-2"></i> Nuovo Parcheggio
+                <button class="btn btn-light btn-lg" onclick="openCreateParkingModal()">
+                    <i class="fas fa-plus me-2"></i>Nuovo Parcheggio
         </button>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Indirizzo</th>
-                        <th>Capienza</th>
-                        <th>Posti Liberi</th>
-                        <th>Azioni</th>
-                    </tr>
-                </thead>
-                <tbody id="parkingsTable">
-                    <!-- populated by JS -->
-                </tbody>
-            </table>
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-primary mb-2">
+                    <i class="fas fa-parking fa-2x"></i>
+                </div>
+                <h3 class="card-title text-primary">@Model.TotalParkings</h3>
+                <p class="card-text text-muted">Parcheggi Totali</p>
+            </div>
         </div>
     </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-success mb-2">
+                    <i class="fas fa-check-circle fa-2x"></i>
+                </div>
+                <h3 class="card-title text-success">@Model.AvailableSlots</h3>
+                <p class="card-text text-muted">Posti Liberi</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-warning mb-2">
+                    <i class="fas fa-car fa-2x"></i>
+                </div>
+                <h3 class="card-title text-warning">@Model.OccupiedSlots</h3>
+                <p class="card-text text-muted">Posti Occupati</p>
+            </div>
+    </div>
+</div>
+
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100 border-0 shadow-sm">
+    <div class="card-body">
+                <div class="text-info mb-2">
+                    <i class="fas fa-euro-sign fa-2x"></i>
+                </div>
+                <h3 class="card-title text-info">€@Model.TotalRevenue.ToString("F2")</h3>
+                <p class="card-text text-muted">Ricavi Stimati</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Alert -->
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Attenzione:</strong> @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Search and Filter -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="input-group">
+            <span class="input-group-text bg-white">
+                <i class="fas fa-search text-muted"></i>
+            </span>
+            <input type="text" class="form-control" id="searchInput" placeholder="Cerca parcheggi per nome o indirizzo...">
+        </div>
+    </div>
+    <div class="col-md-4">
+        <select class="form-select" id="filterStatus">
+            <option value="">Tutti gli stati</option>
+            <option value="libero">Solo liberi</option>
+            <option value="occupato">Solo occupati</option>
+        </select>
+    </div>
+</div>
+
+<!-- Parkings Grid -->
+<div class="row" id="parkingsGrid">
+    @if (Model.Parkings?.Any() == true)
+    {
+        @foreach (var parking in Model.Parkings)
+        {
+            <div class="col-lg-6 col-xl-4 mb-4 parking-card" 
+                 data-name="@parking.Nome?.ToLower()" 
+                 data-address="@parking.Indirizzo?.ToLower()"
+                 data-available="@parking.PostiLiberi"
+                 data-occupied="@parking.PostiOccupati">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 pb-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title mb-1">@parking.Nome</h5>
+                                <p class="text-muted small mb-0">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    @parking.Indirizzo
+                                </p>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="editParking(@parking.Id)"><i class="fas fa-edit me-2"></i>Modifica</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="viewParkingDetails(@parking.Id)"><i class="fas fa-eye me-2"></i>Dettagli</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteParking(@parking.Id)"><i class="fas fa-trash me-2"></i>Elimina</a></li>
+                                </ul>
+        </div>
+    </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <p class="card-text small text-muted mb-3">
+                            <i class="fas fa-map-marker-alt me-1"></i>
+                            @parking.Indirizzo
+                        </p>
+                        
+                        <div class="row text-center mb-3">
+                            <div class="col-6">
+                                <div class="border-end">
+                                    <h6 class="text-success mb-1">@parking.PostiLiberi</h6>
+                                    <small class="text-muted">Liberi</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-warning mb-1">@parking.PostiOccupati</h6>
+                                <small class="text-muted">Occupati</small>
+                            </div>
+                        </div>
+                        
+                        <div class="progress mb-3" style="height: 8px;">
+                            @{
+                                var totalSlots = parking.Capienza;
+                                var occupiedPercentage = totalSlots > 0 ? parking.PostiOccupati * 100 / totalSlots : 0;
+                            }
+                            <div class="progress-bar bg-warning" style="width: @occupiedPercentage%"></div>
+                        </div>
+                        
+                        <small class="text-muted">
+                            Capacità totale: <strong>@parking.Capienza</strong> posti
+                        </small>
+                    </div>
+                    
+                    <div class="card-footer bg-white border-0 pt-0">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary flex-fill" onclick="viewParkingDetails(@parking.Id)">
+                                <i class="fas fa-eye me-1"></i>Dettagli
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="editParking(@parking.Id)">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-parking fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Nessun parcheggio trovato</h5>
+                <p class="text-muted">Crea il primo parcheggio per iniziare</p>
+                <button class="btn btn-primary" onclick="openCreateParkingModal()">
+                    <i class="fas fa-plus me-2"></i>Nuovo Parcheggio
+                </button>
+            </div>
+        </div>
+    }
 </div>
 
 <!-- Create Parking Modal -->
 <div class="modal fade" id="createParkingModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Nuovo Parcheggio</h5>
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>Nuovo Parcheggio
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="createParkingForm">
                 <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label">Nome</label>
+                                <label class="form-label">Nome Parcheggio *</label>
                         <input type="text" class="form-control" name="nome" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Indirizzo</label>
-                        <input type="text" class="form-control" name="indirizzo" required>
                     </div>
+                        <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label">Capienza</label>
+                                <label class="form-label">Capacità *</label>
                         <input type="number" class="form-control" name="capienza" min="1" value="10" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Indirizzo *</label>
+                        <input type="text" class="form-control" name="indirizzo" required>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                    <button type="submit" class="btn btn-primary">Crea</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Crea Parcheggio
+                    </button>
                 </div>
             </form>
         </div>
@@ -71,32 +246,37 @@
 
 @section Scripts {
     <script>
-        async function fetchParkings() {
-            const token = localStorage.getItem('token');
-            try {
-                const res = await fetch('/api/parcheggi', { headers: { 'Authorization': `Bearer ${token}` } });
-                if (!res.ok) throw new Error('Errore caricamento parcheggi');
-                const data = await res.json();
-                const tbody = document.getElementById('parkingsTable');
-                tbody.innerHTML = '';
-                data.forEach(p => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${p.nome}</td>
-                        <td>${p.indirizzo}</td>
-                        <td>${p.capienza}</td>
-                        <td>${p.postiLiberi}</td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-danger" onclick="deleteParking(${p.id})"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } catch (e) {
-                showAlert(e.message || 'Errore', 'error');
-            }
+        // Search and filter functionality
+        document.getElementById('searchInput').addEventListener('input', filterParkings);
+        document.getElementById('filterStatus').addEventListener('change', filterParkings);
+        
+        function filterParkings() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('filterStatus').value;
+            const cards = document.querySelectorAll('.parking-card');
+            
+            cards.forEach(card => {
+                const name = card.dataset.name || '';
+                const address = card.dataset.address || '';
+                const available = parseInt(card.dataset.available) || 0;
+                const occupied = parseInt(card.dataset.occupied) || 0;
+                
+                const matchesSearch = name.includes(searchTerm) || 
+                                    address.includes(searchTerm);
+                
+                let matchesStatus = true;
+                if (statusFilter === 'libero') {
+                    matchesStatus = available > 0;
+                } else if (statusFilter === 'occupato') {
+                    matchesStatus = occupied > 0;
+                }
+                
+                if (matchesSearch && matchesStatus) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         }
 
         function openCreateParkingModal() {
@@ -104,52 +284,50 @@
             modal.show();
         }
 
-        document.getElementById('createParkingForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const f = e.target;
-            const payload = {
-                Nome: f.nome.value,
-                Indirizzo: f.indirizzo.value,
-                Capienza: parseInt(f.capienza.value, 10)
-            };
-            const token = localStorage.getItem('token');
-            try {
-                const res = await fetch('/api/admin/parking', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                    showAlert('Parcheggio creato', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('createParkingModal')).hide();
-                    fetchParkings();
-                } else {
-                    const err = await res.json();
-                    showAlert(err.message || 'Errore', 'error');
-                }
-            } catch (err) {
-                showAlert('Errore di connessione', 'error');
-            }
-        });
-
-        async function deleteParking(id) {
-            if (!confirm('Eliminare questo parcheggio?')) return;
-            const token = localStorage.getItem('token');
-            try {
-                const res = await fetch(`/api/parcheggi/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-                if (res.status === 204) {
-                    showAlert('Parcheggio eliminato', 'success');
-                    fetchParkings();
-                } else {
-                    showAlert('Errore durante l\'eliminazione', 'error');
-                }
-            } catch (e) {
-                showAlert('Errore di connessione', 'error');
+        function editParking(id) {
+            // TODO: Implement edit functionality
+            alert('Funzionalità di modifica in sviluppo');
+        }
+        
+        function viewParkingDetails(id) {
+            // TODO: Implement view details functionality
+            alert('Funzionalità di visualizzazione dettagli in sviluppo');
+        }
+        
+        function deleteParking(id) {
+            if (confirm('Sei sicuro di voler eliminare questo parcheggio?')) {
+                // TODO: Implement delete functionality
+                alert('Funzionalità di eliminazione in sviluppo');
             }
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchParkings();
+        
+        // Form submission
+        document.getElementById('createParkingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const parkingData = {
+                nome: formData.get('nome'),
+                indirizzo: formData.get('indirizzo'),
+                capienza: parseInt(formData.get('capienza'))
+            };
+            
+            try {
+                // TODO: Implement API call to create parking
+                console.log('Creating parking:', parkingData);
+                alert('Funzionalità di creazione in sviluppo');
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('createParkingModal'));
+                modal.hide();
+                
+                // Reset form
+                this.reset();
+                
+            } catch (error) {
+                console.error('Error creating parking:', error);
+                alert('Errore nella creazione del parcheggio');
+            }
         });
     </script>
 }

@@ -1,4 +1,5 @@
 using SharingMezzi.Web.Services;
+using SharingMezzi.Web.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +8,8 @@ builder.WebHost.UseUrls("http://0.0.0.0:5050");
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+// Register controllers (attribute-routed controllers like AuthController)
+builder.Services.AddControllers();
 
 // ===== SERVIZI FONDAMENTALI =====
 builder.Services.AddHttpContextAccessor();
@@ -76,8 +79,14 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseCors("AllowBackend");
 app.UseSession();
+app.UseAutoLogin(); // Middleware per auto-login dai cookie persistenti
+app.UseAuthenticationMiddleware(); // Middleware per proteggere le pagine autenticate
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Ensure attribute routed controllers are mapped (AuthController -> /Auth/*, BillingController -> /api/billing/*)
+app.MapControllers();
+
 app.MapRazorPages();
 
 // ===== LOG DI AVVIO =====

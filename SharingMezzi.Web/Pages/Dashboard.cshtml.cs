@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SharingMezzi.Web.Services;
 using SharingMezzi.Web.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SharingMezzi.Web.Pages
 {
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public class DashboardModel : PageModel
     {
         private readonly IAuthService _authService;

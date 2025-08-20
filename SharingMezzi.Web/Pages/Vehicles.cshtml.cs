@@ -1,10 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using SharingMezzi.Web.Models;
 using SharingMezzi.Web.Services;
+using SharingMezzi.Web.Models;
+using System.Net.Http;
+using System.Text.Json;
+using Newtonsoft.Json.Linq;
 
 namespace SharingMezzi.Web.Pages
 {
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public class VehiclesModel : PageModel
     {
         private readonly IAuthService _authService;
@@ -57,10 +61,66 @@ namespace SharingMezzi.Web.Pages
                     _logger.LogInformation($"👤 DEBUG: User ID: {user.Id}, Nome: {user.Nome}, Ruolo: {user.Ruolo}");
                 }
 
-                // Test diversi endpoint
-                _logger.LogInformation("📡 DEBUG: Tentativo endpoint GetAvailableVehiclesAsync()");
-                Vehicles = await _vehicleService.GetAvailableVehiclesAsync();
-                _logger.LogInformation($"📊 DEBUG: GetAvailableVehiclesAsync restituito {Vehicles.Count} mezzi");
+                // 🔧 SOLUZIONE TEMPORANEA: Usa direttamente l'API pubblica che funziona
+                _logger.LogInformation("🔧 DEBUG: Tentativo caricamento diretto da API pubblica");
+                try
+                {
+                    using var httpClient = new HttpClient();
+                    var response = await httpClient.GetAsync("http://localhost:5000/api/public/mezzi/disponibili");
+                    var content = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode && !string.IsNullOrEmpty(content))
+                    {
+                        _logger.LogInformation($"🌐 DEBUG: API pubblica response: {response.StatusCode}");
+
+                        try
+                        {
+                            var jArray = JArray.Parse(content);
+                            if (jArray != null && jArray.Count > 0)
+                            {
+                                Vehicles = jArray.Select(j => new Vehicle
+                                {
+                                    Id = (int?)(j["id"]?.Value<int?>()) ?? 0,
+                                    Modello = (string?)(j["modello"]?.Value<string>()) ?? "",
+                                    Tipo = ParseVehicleTypeFromJson((int?)(j["tipo"]?.Value<int?>()) ?? 0),
+                                    IsElettrico = (bool?)(j["isElettrico"]?.Value<bool?>()) ?? false,
+                                    Stato = ParseVehicleStatusFromJson((string?)(j["stato"]?.Value<string>())),
+                                    LivelloBatteria = (int?)(j["livelloBatteria"]?.Value<int?>()),
+                                    TariffaPerMinuto = j["tariffaPerMinuto"] != null ? Convert.ToDecimal(j["tariffaPerMinuto"].Value<double>()) : 0m,
+                                    TariffaFissa = j["tariffaFissa"] != null ? Convert.ToDecimal(j["tariffaFissa"].Value<double>()) : 0m,
+                                    ParcheggioId = (int?)(j["parcheggioAttualeId"]?.Value<int?>())
+                                }).ToList();
+
+                                _logger.LogInformation($"✅ DEBUG: Parsati {Vehicles.Count} mezzi dall'API pubblica (Newtonsoft)");
+                            }
+                            else
+                            {
+                                _logger.LogWarning("⚠️ DEBUG: Nessun dato valido dall'API pubblica (Newtonsoft)");
+                            }
+                        }
+                        catch (Exception parseEx)
+                        {
+                            _logger.LogError(parseEx, "❌ DEBUG: Errore parsing JSON API pubblica");
+                            _logger.LogInformation($"🌐 DEBUG: content: {content}");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"⚠️ DEBUG: API pubblica fallita: {response.StatusCode}");
+                    }
+                }
+                catch (Exception apiEx)
+                {
+                    _logger.LogError(apiEx, "❌ DEBUG: Errore chiamata diretta API pubblica");
+                }
+
+                // Se ancora non ci sono mezzi, prova i servizi tradizionali
+                if (Vehicles.Count == 0)
+                {
+                    _logger.LogInformation("📡 DEBUG: Tentativo endpoint GetAvailableVehiclesAsync()");
+                    Vehicles = await _vehicleService.GetAvailableVehiclesAsync();
+                    _logger.LogInformation($"📊 DEBUG: GetAvailableVehiclesAsync restituito {Vehicles.Count} mezzi");
+                }
 
                 if (Vehicles.Count == 0)
                 {
@@ -69,7 +129,7 @@ namespace SharingMezzi.Web.Pages
                     _logger.LogInformation($"📊 DEBUG: GetVehiclesAsync restituito {Vehicles.Count} mezzi");
                 }
 
-                if (Vehicles.Count == 0 && user?.Ruolo == UserRole.Amministratore)
+                if (Vehicles.Count == 0 && user?.Ruolo == UserRole.Admin)
                 {
                     _logger.LogInformation("📡 DEBUG: Tentativo endpoint GetAllVehiclesAsync() per admin");
                     Vehicles = await _vehicleService.GetAllVehiclesAsync();
@@ -106,29 +166,112 @@ namespace SharingMezzi.Web.Pages
             }
         }
 
+        // 🔧 METODI DI PARSING PER JSON
+        private static VehicleType ParseVehicleTypeFromJson(int tipo)
+        {
+            return tipo switch
+            {
+                0 => VehicleType.Bicicletta,
+                1 => VehicleType.Scooter,
+                2 => VehicleType.Auto,
+                3 => VehicleType.Monopattino,
+                4 => VehicleType.EBike,
+                _ => VehicleType.Bicicletta
+            };
+        }
+
+        private static VehicleStatus ParseVehicleStatusFromJson(string? stato)
+        {
+            if (string.IsNullOrEmpty(stato)) return VehicleStatus.Disponibile;
+            
+            return stato.ToLower() switch
+            {
+                "disponibile" => VehicleStatus.Disponibile,
+                "inuso" or "occupato" => VehicleStatus.InUso,
+                "manutenzione" => VehicleStatus.Manutenzione,
+                "fuori_servizio" or "fuoriservizio" => VehicleStatus.Fuori_Servizio,
+                _ => VehicleStatus.Disponibile
+            };
+        }
+
         public async Task<IActionResult> OnGetAsync()
         {
             _logger.LogInformation("🚀 DEBUG: Vehicles page loading started");
 
-            // Check authentication
+            // Check authentication with detailed logging
             var token = _authService.GetToken();
+            _logger.LogInformation($"🔑 DEBUG: Token presente: {!string.IsNullOrEmpty(token)}");
+            
+            if (!string.IsNullOrEmpty(token))
+            {
+                _logger.LogInformation($"🔑 DEBUG: Token length: {token.Length}");
+                _logger.LogInformation($"🔑 DEBUG: Token inizio: {token.Substring(0, Math.Min(20, token.Length))}...");
+            }
+
+            // Verifica anche l'utente corrente
+            var currentUser = await _authService.GetCurrentUserAsync();
+            _logger.LogInformation($"👤 DEBUG: Current user: {currentUser != null}");
+            if (currentUser != null)
+            {
+                _logger.LogInformation($"👤 DEBUG: User ID: {currentUser.Id}, Nome: {currentUser.Nome}, Ruolo: {currentUser.Ruolo}");
+            }
+
+            // Se non c'è token ma c'è utente, prova a recuperare il token
+            if (string.IsNullOrEmpty(token) && currentUser != null)
+            {
+                _logger.LogWarning("⚠️ DEBUG: Token mancante ma utente presente, tentativo recupero...");
+                
+                // Prova a forzare il refresh dell'autenticazione
+                try
+                {
+                    // Forza il refresh della sessione
+                    _authService.SetToken(_authService.GetToken() ?? "");
+                    token = _authService.GetToken();
+                    _logger.LogInformation($"🔄 DEBUG: Token dopo refresh: {!string.IsNullOrEmpty(token)}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ DEBUG: Errore durante refresh token");
+                }
+            }
+
+            // Se ancora non c'è token, mostra errore invece di reindirizzare
             if (string.IsNullOrEmpty(token))
             {
-                _logger.LogWarning("🔒 DEBUG: User not authenticated, redirecting to login");
-                return RedirectToPage("/Login");
+                _logger.LogWarning("🔒 DEBUG: User not authenticated, showing error instead of redirecting");
+                ErrorMessage = "Errore di autenticazione. Il tuo token di accesso è scaduto o non è valido. Effettua nuovamente il login.";
+                Vehicles = new List<Vehicle>();
+                IsDataLoaded = false;
+                return Page(); // Non reindirizza, mostra la pagina con errore
             }
 
             try
             {
+                _logger.LogInformation("🔍 DEBUG: Tentativo caricamento mezzi con autenticazione");
+                
                 // 🔧 USA IL METODO DEBUG TEMPORANEAMENTE 🔧
                 await LoadVehiclesWithDebugAsync();
 
                 _logger.LogInformation($"✅ DEBUG: Vehicles page loaded successfully. Total vehicles: {Vehicles.Count}");
+                
+                // Log dettagliato dei mezzi caricati
+                if (Vehicles.Any())
+                {
+                    _logger.LogInformation("🚲 DEBUG: Mezzi caricati con successo:");
+                    foreach (var vehicle in Vehicles.Take(3))
+                    {
+                        _logger.LogInformation($"   - ID: {vehicle.Id}, Modello: {vehicle.Modello}, Stato: {vehicle.Stato}, Tipo: {vehicle.Tipo}");
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ DEBUG: Nessun mezzo caricato dalla pagina");
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ DEBUG: Error loading vehicles page");
-                ErrorMessage = "Errore nel caricamento dei mezzi. Riprova più tardi.";
+                ErrorMessage = $"Errore nel caricamento dei mezzi: {ex.Message}";
                 Vehicles = new List<Vehicle>();
                 IsDataLoaded = false;
             }
@@ -296,6 +439,45 @@ namespace SharingMezzi.Web.Pages
             {
                 _logger.LogError(ex, "Error refreshing vehicles");
                 return new JsonResult(new { success = false, message = "Errore nel refresh dei dati." });
+            }
+        }
+
+        // API endpoint for refreshing authentication
+        public async Task<IActionResult> OnGetRefreshAuthAsync()
+        {
+            try
+            {
+                _logger.LogInformation("🔄 DEBUG: Tentativo refresh autenticazione");
+                
+                // Prova a recuperare l'utente corrente
+                var currentUser = await _authService.GetCurrentUserAsync();
+                if (currentUser != null)
+                {
+                    _logger.LogInformation($"👤 DEBUG: Utente trovato: {currentUser.Nome}");
+                    
+                    // Prova a forzare il refresh del token
+                    var token = _authService.GetToken();
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        _logger.LogInformation("✅ DEBUG: Token presente, autenticazione valida");
+                        return new JsonResult(new { success = true, message = "Autenticazione valida", user = currentUser.Nome });
+                    }
+                    else
+                    {
+                        _logger.LogWarning("⚠️ DEBUG: Token mancante nonostante utente presente");
+                        return new JsonResult(new { success = false, message = "Token mancante, richiesto nuovo login" });
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ DEBUG: Nessun utente trovato");
+                    return new JsonResult(new { success = false, message = "Nessun utente autenticato" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ DEBUG: Errore durante refresh autenticazione");
+                return new JsonResult(new { success = false, message = $"Errore: {ex.Message}" });
             }
         }
     }

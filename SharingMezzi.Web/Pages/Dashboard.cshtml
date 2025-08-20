@@ -553,8 +553,10 @@ function ensureSessionAndNavigate(href) {
             return;
         }
 
-        // POST token to server session and wait shortly, then navigate
-        fetch('/Auth/SetSession', {
+    // POST token to server session and wait shortly, then navigate
+    const apiBase = (window.authManager && window.authManager.apiBaseUrl) ? window.authManager.apiBaseUrl.replace(/\/$/, '') : (location.port === '5050' ? `${location.protocol}//${location.hostname}:5000` : `${location.protocol}//${location.host}`);
+    // POST to API
+        fetch(location.origin + '/Auth/SetSession', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },

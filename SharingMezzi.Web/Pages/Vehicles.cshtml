@@ -1,6 +1,8 @@
 @page "/Vehicles"
 @model SharingMezzi.Web.Pages.VehiclesModel
 @using SharingMezzi.Web.Models
+@using static SharingMezzi.Web.Models.VehicleStatus
+@using static SharingMezzi.Web.Models.VehicleType
 @{
     ViewData["Title"] = "Mezzi Disponibili";
     Layout = "_Layout";
@@ -461,13 +463,28 @@
     </style>
 }
 
-<!-- Error Alert -->
+<!-- Error Message -->
 @if (!string.IsNullOrEmpty(Model.ErrorMessage))
 {
-    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        <strong>Attenzione:</strong> @Model.ErrorMessage
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="container mb-4">
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        
+        <!-- Pulsante per refresh autenticazione -->
+        @if (Model.ErrorMessage.Contains("autenticazione") || Model.ErrorMessage.Contains("token"))
+        {
+            <div class="text-center mb-4">
+                <button type="button" class="btn btn-primary" onclick="refreshAuthentication()">
+                    <i class="fas fa-sync-alt me-2"></i>Ricarica Autenticazione
+                </button>
+                <a href="/Login" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-sign-in-alt me-2"></i>Vai al Login
+                </a>
+            </div>
+        }
     </div>
 }
 
@@ -731,6 +748,46 @@
 
         function showVehicleDetails(vehicleId) {
             window.location.href = `/Vehicles/Details/${vehicleId}`;
+        }
+
+        function refreshAuthentication() {
+            // Mostra loading
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Caricamento...';
+            btn.disabled = true;
+            
+            // Chiama l'endpoint di refresh
+            fetch('/Vehicles?handler=RefreshAuth')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Autenticazione valida, ricarica la pagina
+                        window.location.reload();
+                    } else {
+                        // Autenticazione non valida, vai al login
+                        alert('Autenticazione non valida. Reindirizzamento al login...');
+                        if (window.safeRedirect) {
+                            window.safeRedirect('/Login');
+                        } else {
+                            window.location.href = '/Login';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Errore durante refresh autenticazione:', error);
+                    alert('Errore durante il refresh. Reindirizzamento al login...');
+                    if (window.safeRedirect) {
+                        window.safeRedirect('/Login');
+                    } else {
+                        window.location.href = '/Login';
+                    }
+                })
+                .finally(() => {
+                    // Ripristina il pulsante
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                });
         }
     </script>
 }

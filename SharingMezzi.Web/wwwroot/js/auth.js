@@ -11,6 +11,19 @@ class AuthManager {
         this.checkAuthStatus();
     }
 
+    getApiBase() {
+        try {
+            if (window.authManager && window.authManager.apiBaseUrl) return window.authManager.apiBaseUrl.replace(/\/$/, '');
+            const loc = window.location;
+            if (loc.port === '5050') {
+                return `${loc.protocol}//${loc.hostname}:5000`;
+            }
+            return `${loc.protocol}//${loc.host}`;
+        } catch (e) {
+            return '';
+        }
+    }
+
     setupForms() {
         // Register form
         const registerForm = document.getElementById('registerForm');
@@ -87,7 +100,7 @@ class AuthManager {
             submitBtn.style.display = 'none';
             loading.classList.add('show');
             
-            const response = await fetch(`${this.apiBaseUrl}/api/auth/login`, {
+                const response = await fetch(this.getApiBase() + '/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -156,7 +169,7 @@ class AuthManager {
             submitBtn.style.display = 'none';
             loading.classList.add('show');
             
-            const response = await fetch(`${this.apiBaseUrl}/api/auth/register`, {
+                const response = await fetch(this.getApiBase() + '/api/auth/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -234,9 +247,41 @@ class AuthManager {
         if (token && isAuthPage) {
             // User is logged in but on auth page, redirect to dashboard
             window.location.href = '/Dashboard';
-        } else if (!token && !isAuthPage && !isHomePage) {
-            // User is not logged in but not on auth page (except home), redirect to login
-            window.location.href = '/Login';
+            return;
+        }
+
+        if (!token && !isAuthPage && !isHomePage) {
+            // No client token: ask server if session exists before redirecting
+            (async () => {
+                const maxAttempts = 5;
+                const delayMs = 300;
+                let ok = false;
+                for (let i = 0; i < maxAttempts; i++) {
+                    try {
+                        const resp = await fetch(location.origin + '/Auth/Current', { credentials: 'same-origin' });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data && data.isAuthenticated) {
+                                console.debug('Server session valid, not redirecting to Login (attempt', i + 1, ')');
+                                ok = true;
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        console.debug('Attempt', i + 1, 'failed to verify server session', e);
+                    }
+                    await new Promise(r => setTimeout(r, delayMs));
+                }
+
+                if (!ok) {
+                    // fallback: redirect to login (use safeRedirect to log stack trace)
+                    if (window.safeRedirect) {
+                        window.safeRedirect('/Login');
+                    } else {
+                        window.location.href = '/Login';
+                    }
+                }
+            })();
         }
     }
 
@@ -301,14 +346,26 @@ class AuthManager {
     // Set server session
     async setServerSession(token) {
         try {
-            await fetch('/Auth/SetSession', {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ token: token })
-            });
+            // Retry a couple times in case of transient failures so the client
+            // does not immediately redirect while server-side auto-login is still initializing.
+            const maxAttempts = 3;
+            const delayMs = 250;
+            for (let i = 0; i < maxAttempts; i++) {
+                try {
+                        const resp = await fetch(location.origin + '/Auth/SetSession', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ token: token })
+                    });
+                    if (resp.ok) return;
+                } catch (e) {
+                    console.debug('SetSession attempt', i + 1, 'failed', e);
+                }
+                await new Promise(r => setTimeout(r, delayMs));
+            }
         } catch (error) {
             console.error('Error setting server session:', error);
         }

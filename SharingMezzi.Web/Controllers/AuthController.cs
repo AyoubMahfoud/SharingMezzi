@@ -38,6 +38,27 @@ namespace SharingMezzi.Web.Controllers
                 return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
+
+        [HttpGet("Current")]
+        public IActionResult Current()
+        {
+            try
+            {
+                var isAuth = _authService.IsAuthenticated();
+                if (!isAuth)
+                {
+                    return Unauthorized(new { isAuthenticated = false });
+                }
+
+                var user = _authService.GetCurrentUser();
+                return Ok(new { isAuthenticated = true, user });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current session");
+                return StatusCode(500, new { isAuthenticated = false });
+            }
+        }
     }
 
     public class SetSessionRequest

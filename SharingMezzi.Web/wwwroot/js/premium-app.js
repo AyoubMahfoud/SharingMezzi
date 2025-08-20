@@ -10,33 +10,111 @@ class PremiumApp {
     }
 
     async init() {
-        console.log('🚀 Initializing SharingMezzi Premium App...');
-        
         try {
-            // Core initialization
-            this.setupGlobalErrorHandling();
+            console.log('🚀 Inizializzazione Premium App...');
+            
+            // Setup event listeners
             this.setupEventListeners();
-            this.setupNavigation();
-            this.setupNotifications();
-            this.setupLoadingStates();
-            this.setupFormValidation();
-            this.setupModalHandlers();
-            this.setupTooltips();
-            this.setupLazyLoading();
             
-            // Authentication check
+            // Controlla autenticazione
             await this.checkAuthentication();
+            this.syncPersistentAuth();
             
-            // Page-specific initializations
-            this.initPageSpecific();
+            // Prevenzione navigazione indietro nelle pagine protette
+            this.preventBackNavigation();
             
-            console.log('✅ App initialized successfully');
+            // Gestione cambio pagina
+            this.handlePageChange();
+            
+            // Setup UI
+            this.setupUI();
+            
+            console.log('✅ Premium App inizializzata con successo');
         } catch (error) {
-            console.error('❌ App initialization failed:', error);
-            // Non mostrare errore se è solo un problema di DOM non caricato
-            if (error.name !== 'TypeError') {
-                this.showNotification('Errore di inizializzazione', 'error');
+            console.error('❌ Errore durante l\'inizializzazione:', error);
+        }
+    }
+
+    // Resolve API base URL. Prefer a global auth manager if present, otherwise
+    // assume API runs on same host replacing common web port 5050 with API port 5000.
+    getApiBase() {
+        try {
+            if (window.authManager && window.authManager.apiBaseUrl) return window.authManager.apiBaseUrl.replace(/\/$/, '');
+            const loc = window.location;
+            // If running on the web UI port (5050) assume API is on 5000
+            if (loc.port === '5050') {
+                return `${loc.protocol}//${loc.hostname}:5000`;
             }
+            return `${loc.protocol}//${loc.host}`;
+        } catch (e) {
+            return '';
+        }
+    }
+
+    // Setup UI di base
+    setupUI() {
+        try {
+            // Setup sidebar toggle
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('d-none');
+                });
+            }
+            
+            // Setup sidebar close per mobile
+            const sidebarClose = document.getElementById('sidebarClose');
+            if (sidebarClose && sidebar) {
+                sidebarClose.addEventListener('click', () => {
+                    sidebar.classList.add('d-none');
+                });
+            }
+            
+            console.log('✅ UI setup completato');
+        } catch (error) {
+            console.warn('⚠️ Errore durante il setup UI:', error);
+        }
+    }
+
+    // Setup event listeners di base
+    setupEventListeners() {
+        try {
+            // Gestione logout dalla navbar
+            const logoutButtons = document.querySelectorAll('[href="/Logout"], .logout-btn');
+            logoutButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.logout();
+                });
+            });
+            
+            console.log('✅ Event listeners configurati');
+        } catch (error) {
+            console.warn('⚠️ Errore durante il setup event listeners:', error);
+        }
+    }
+
+    // Sincronizza l'autenticazione con i cookie persistenti
+    syncPersistentAuth() {
+        try {
+            // Controlla se ci sono cookie persistenti ma non siamo autenticati
+            const hasPersistentToken = document.cookie.includes('PersistentToken');
+            const hasPersistentUser = document.cookie.includes('PersistentUser');
+            
+            if (hasPersistentToken && hasPersistentUser && !this.isAuthenticated) {
+                console.log('🔄 Rilevati cookie persistenti, sincronizzando autenticazione...');
+                
+                // Forza un refresh della pagina per attivare il middleware di auto-login
+                // Questo è più sicuro che manipolare direttamente i cookie
+                if (window.location.pathname !== '/Login' && window.location.pathname !== '/Register') {
+                    console.log('🔄 Refresh per attivare auto-login...');
+                    window.location.reload();
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Errore durante la sincronizzazione auth persistente:', error);
         }
     }
 
@@ -157,7 +235,7 @@ class PremiumApp {
                     if (!token) return;
                     try {
                         // include credentials to allow server to set/receive session cookie
-                        await fetch('/Auth/SetSession', {
+                        await fetch(location.origin + '/Auth/SetSession', {
                             method: 'POST',
                             credentials: 'include',
                             headers: { 'Content-Type': 'application/json' },
@@ -200,7 +278,7 @@ class PremiumApp {
                 e.preventDefault();
 
                 const token = localStorage.getItem('token') || localStorage.getItem('auth_token') || localStorage.getItem('authToken');
-                fetch('/Auth/SetSession', {
+                fetch(location.origin + '/Auth/SetSession', {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
@@ -596,12 +674,32 @@ class PremiumApp {
         }
     }
 
-    // FIXED: Enhanced authentication senza endpoint validate
+    // FIXED: Enhanced authentication con supporto per cookie persistenti
     async checkAuthentication() {
         try {
-            const token = localStorage.getItem('auth_token');
+            // Cerca il token sia in localStorage che in sessionStorage usando chiavi comuni
+            const token = await this.getStoredToken();
+
+            // Se non c'è token in memoria, chiedi al server se esiste una sessione valida
             if (!token) {
-                console.log('❌ No token found');
+                console.log('🔄 No stored token, asking server for current session...');
+                try {
+                        const resp = await fetch(location.origin + '/Auth/Current', { credentials: 'same-origin' });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (data && data.isAuthenticated) {
+                            console.log('� Server session valid, setting current user from server');
+                            if (data.user) {
+                                this.setCurrentUser(data.user);
+                            }
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    console.debug('Could not verify server session', err);
+                }
+
+                console.log('❌ No token found anywhere');
                 this.handleUnauthenticated();
                 return;
             }
@@ -616,9 +714,17 @@ class PremiumApp {
 
             // Controlla se il token è scaduto
             if (payload.exp * 1000 < Date.now()) {
-                console.log('❌ Token expired');
-                this.handleUnauthenticated();
-                return;
+                console.log('❌ Token expired, attempting refresh...');
+                // Prova a rinnovare l'autenticazione
+                const refreshed = await this.refreshAuthentication();
+                if (refreshed) {
+                    console.log('✅ Token refreshed successfully');
+                    return;
+                } else {
+                    console.log('❌ Token refresh failed');
+                    this.handleUnauthenticated();
+                    return;
+                }
             }
 
             console.log('✅ Token valid, user payload:', payload);
@@ -659,6 +765,190 @@ class PremiumApp {
         }
     }
 
+    // Recupera il token da localStorage o sessionStorage (chiavi comuni usate in altre parti)
+    async getStoredToken() {
+        // Controlla le chiavi più comuni usate nel progetto
+        const keys = ['token', 'auth_token', 'authToken'];
+        for (const k of keys) {
+            let v = localStorage.getItem(k);
+            if (v) return v;
+            v = sessionStorage.getItem(k);
+            if (v) return v;
+        }
+        
+        // Se non c'è token locale, prova a ottenerlo dal server
+        console.log('🔄 Nessun token locale, tentativo di recupero dal server...');
+        try {
+            const response = await fetch('/api/auth/current-token', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.Success && data.Token) {
+                    console.log('✅ Token ottenuto dal server');
+                    // Salva il token per usi futuri
+                    localStorage.setItem('auth_token', data.Token);
+                    return data.Token;
+                }
+            } else {
+                console.log('❌ Impossibile ottenere token dal server:', response.status);
+            }
+        } catch (error) {
+            console.warn('Errore nel recupero del token dal server:', error);
+        }
+        
+        console.log('❌ Nessun token disponibile');
+        return null;
+    }
+
+    // Metodo pubblico per ottenere il token (compatibilità con altre parti dell'app)
+    async getToken() {
+        const token = await this.getStoredToken();
+        if (!token) return null;
+        
+        // Controlla se il token è scaduto
+        const payload = this.decodeJWT(token);
+        if (payload && payload.exp * 1000 < Date.now()) {
+            console.log('🔄 Token scaduto, tentativo di refresh...');
+            // Rimuovi il token scaduto
+            this.clearExpiredToken();
+            // Prova a rinnovare l'autenticazione (non bloccante)
+            this.refreshAuthentication().then(refreshed => {
+                if (refreshed) {
+                    console.log('✅ Token refreshed successfully');
+                } else {
+                    console.log('❌ Token refresh failed');
+                }
+            });
+            return null;
+        }
+        
+        return token;
+    }
+
+    // Metodo asincrono per ottenere il token con refresh automatico
+    async getTokenAsync() {
+        const token = await this.getStoredToken();
+        if (!token) return null;
+        
+        // Controlla se il token è scaduto
+        const payload = this.decodeJWT(token);
+        if (payload && payload.exp * 1000 < Date.now()) {
+            console.log('🔄 Token scaduto, tentativo di refresh sincrono...');
+            // Prova a rinnovare l'autenticazione usando il refresh token
+            const refreshed = await this.refreshToken();
+            if (refreshed) {
+                console.log('✅ Token refreshed successfully');
+                return await this.getStoredToken();
+            } else {
+                console.log('❌ Token refresh failed');
+                this.clearExpiredToken();
+                return null;
+            }
+        }
+        
+        return token;
+    }
+
+    // Prova a rinnovare il token usando il refresh token
+    async refreshToken() {
+        try {
+            // Prova prima a ottenere il refresh token dalla sessione del server
+            console.log('🔄 Tentativo di refresh del token...');
+            
+            const response = await fetch('/api/auth/refresh-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin' // Importante per includere i cookie di sessione
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.Success && data.Token) {
+                    console.log('✅ Nuovo token ottenuto dal refresh');
+                    // Salva il nuovo token
+                    localStorage.setItem('auth_token', data.Token);
+                    return true;
+                }
+            } else {
+                console.log('❌ Refresh token fallito:', response.status);
+            }
+        } catch (error) {
+            console.warn('Refresh token error:', error);
+        }
+        return false;
+    }
+
+    // Recupera il refresh token da localStorage
+    getStoredRefreshToken() {
+        return localStorage.getItem('refresh_token');
+    }
+
+    // Rimuovi il token scaduto
+    clearExpiredToken() {
+        const keys = ['token', 'auth_token', 'authToken'];
+        keys.forEach(k => {
+            localStorage.removeItem(k);
+            sessionStorage.removeItem(k);
+        });
+        // Rimuovi anche il refresh token se il refresh fallisce
+        localStorage.removeItem('refresh_token');
+        
+        // Prova a rimuovere anche dalla sessione del server
+        fetch('/Auth/Logout', { 
+            method: 'POST', 
+            credentials: 'same-origin' 
+        }).catch(e => console.warn('Errore durante logout:', e));
+    }
+
+    // Prova a rinnovare l'autenticazione
+    async refreshAuthentication() {
+        try {
+            console.log('🔄 Tentativo di refresh dell\'autenticazione...');
+            // Prova a ottenere una nuova sessione dal server
+            const resp = await fetch(location.origin + '/Auth/Current', { credentials: 'same-origin' });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data && data.isAuthenticated && data.token) {
+                    console.log('✅ Nuovo token ottenuto dal server');
+                    // Salva il nuovo token
+                    localStorage.setItem('auth_token', data.token);
+                    this.setCurrentUser(data.user);
+                    return true;
+                }
+            }
+            
+            // Se il metodo precedente fallisce, prova con il nuovo endpoint
+            console.log('🔄 Tentativo con nuovo endpoint di refresh...');
+            const refreshResp = await fetch('/api/auth/current-token', { 
+                credentials: 'same-origin' 
+            });
+            if (refreshResp.ok) {
+                const refreshData = await refreshResp.json();
+                if (refreshData.Success && refreshData.Token) {
+                    console.log('✅ Nuovo token ottenuto dal nuovo endpoint');
+                    localStorage.setItem('auth_token', refreshData.Token);
+                    if (refreshData.User) {
+                        this.setCurrentUser(refreshData.User);
+                    }
+                    return true;
+                }
+            }
+        } catch (error) {
+            console.warn('Refresh authentication failed:', error);
+        }
+        return false;
+    }
+
+    // Proprietà per l'URL base dell'API (compatibilità con altre parti dell'app)
+    get apiBaseUrl() {
+        return this.getApiBase();
+    }
+
     // Aggiungi questa funzione per parsare il ruolo
     parseUserRole(role) {
         console.log('🔍 Parsing user role:', role, typeof role);
@@ -684,18 +974,63 @@ class PremiumApp {
         this.updateUserInterface();
     }
 
+    // Salva il refresh token quando ricevuto dal login
+    saveRefreshToken(refreshToken) {
+        if (refreshToken) {
+            localStorage.setItem('refresh_token', refreshToken);
+            console.log('✅ Refresh token salvato');
+        }
+    }
+
     handleUnauthenticated() {
         this.currentUser = null;
         this.isAuthenticated = false;
         localStorage.removeItem('auth_token');
-        
-        // Redirect to login if on protected page
-        const protectedPaths = ['/vehicles', '/trips', '/billing', '/profile', '/admin'];
-        const currentPath = window.location.pathname;
-        
-        if (protectedPaths.some(path => currentPath.startsWith(path))) {
-            window.location.href = '/auth/login';
-        }
+
+        // Only act for protected pages
+        if (!this.isProtectedPage()) return;
+
+        // Prevent multiple concurrent checks
+        if (this._authCheckInProgress) return;
+        this._authCheckInProgress = true;
+
+        // We cannot rely on document.cookie for HttpOnly cookies. Ask the server
+        // for the current session before redirecting so we avoid race conditions
+        // with server-side auto-login middleware.
+        (async () => {
+            const maxAttempts = 5;
+            const delayMs = 300;
+            let ok = false;
+
+            for (let i = 0; i < maxAttempts; i++) {
+                try {
+                    const resp = await fetch(location.origin + '/Auth/Current', { credentials: 'same-origin' });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (data && data.isAuthenticated) {
+                            console.debug('Server session valid, not redirecting to Login (attempt', i + 1, ')');
+                            if (data.user) this.setCurrentUser(data.user);
+                            ok = true;
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.debug('Attempt', i + 1, 'failed to verify server session', e);
+                }
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+
+            this._authCheckInProgress = false;
+
+            if (!ok) {
+                console.log('🚫 Pagina protetta senza autenticazione dopo tentativi, reindirizzamento...');
+                if (window.safeRedirect) {
+                    window.safeRedirect('/Login');
+                } else {
+                    window.location.href = '/Login';
+                }
+            }
+        })();
     }
 
     updateUserInterface() {
@@ -1363,6 +1698,89 @@ class PremiumApp {
             }
         }, 1000);
     }
+
+    // Gestione logout
+    logout() {
+        try {
+            console.log('🔓 Logout in corso...');
+            
+            // Pulisci tutti i dati locali
+            this.currentUser = null;
+            this.isAuthenticated = false;
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_data');
+            
+            // Rimuovi i cookie persistenti dal client
+            document.cookie = 'PersistentToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = 'PersistentUser=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            
+            // Reindirizza al logout del server
+            window.location.href = '/Logout';
+        } catch (error) {
+            console.error('❌ Errore durante il logout:', error);
+            // Fallback: reindirizza comunque
+            window.location.href = '/Logout';
+        }
+    }
+
+    // Prevenzione navigazione indietro nelle pagine protette
+    preventBackNavigation() {
+        if (this.isAuthenticated) {
+            // Se l'utente è autenticato, previeni la navigazione indietro
+            window.history.pushState(null, null, window.location.href);
+            window.addEventListener('popstate', () => {
+                window.history.pushState(null, null, window.location.href);
+            });
+        }
+    }
+
+    // Controlla se la pagina corrente richiede autenticazione
+    isProtectedPage() {
+    const protectedPaths = ['/dashboard', '/vehicles', '/trips', '/billing', '/profile', '/admin'];
+    const currentPath = window.location.pathname.toLowerCase();
+    return protectedPaths.some(path => currentPath.startsWith(path));
+    }
+
+    // Gestione cambio pagina
+    handlePageChange() {
+        // If there's a client token or server session, do not redirect. Ask server before redirecting.
+        const storedToken = this.getStoredToken();
+        if (this.isProtectedPage() && !this.isAuthenticated && !storedToken) {
+            (async () => {
+                const maxAttempts = 5;
+                const delayMs = 300;
+                let ok = false;
+                for (let i = 0; i < maxAttempts; i++) {
+                    try {
+                            const resp = await fetch(location.origin + '/Auth/Current', { credentials: 'same-origin' });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data && data.isAuthenticated) {
+                                console.debug('Server session valid, not redirecting to Login (attempt', i + 1, ')');
+                                if (data.user) this.setCurrentUser(data.user);
+                                ok = true;
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        console.debug('Attempt', i + 1, 'failed to verify server session', e);
+                    }
+
+                    // small delay before retrying
+                    await new Promise(r => setTimeout(r, delayMs));
+                }
+
+                if (!ok) {
+                    console.log('🚫 Pagina protetta senza autenticazione dopo tentativi, reindirizzamento...');
+                    if (window.safeRedirect) {
+                        window.safeRedirect('/Login');
+                    } else {
+                        window.location.href = '/Login';
+                    }
+                }
+            })();
+        }
+    }
 }
 
 // CSS Injection for enhanced styles
@@ -1597,8 +2015,65 @@ document.addEventListener('DOMContentLoaded', function () {
         
         if (typeof PremiumApp !== 'undefined' && !window.premiumApp) {
             window.premiumApp = new PremiumApp();
+            // Rendi disponibile globalmente per compatibilità con altre parti dell'app
+            window.app = window.premiumApp;
+            window.authManager = window.premiumApp;
         }
     } catch (e) {
         console.debug('Could not instantiate PremiumApp', e);
     }
 });
+
+// Debug helper: safeRedirect logs a stack trace before navigating so we can
+// identify where redirects to login are coming from during debugging.
+if (!window.safeRedirect) {
+    // recordRedirect saves the redirect details to localStorage so the info
+    // survives navigation (we can inspect it on the destination page).
+    function recordRedirect(url) {
+        try {
+            const stack = (new Error()).stack || '';
+            const payload = {
+                url: url,
+                timestamp: new Date().toISOString(),
+                stack: stack
+            };
+            localStorage.setItem('lastRedirectTrace', JSON.stringify(payload));
+        } catch (e) {
+            // ignore storage failures
+        }
+    }
+
+    window.safeRedirect = function (url) {
+        try {
+            console.groupCollapsed('[safeRedirect] Navigating to: ' + url);
+            console.trace();
+            console.groupEnd();
+        } catch (e) {
+            console.debug('safeRedirect trace failed', e);
+        }
+        // persist trace for inspection after navigation
+        recordRedirect(url);
+        window.location.href = url;
+    };
+}
+
+// On page load show last redirect trace (if any) so we can inspect causes
+try {
+    const last = localStorage.getItem('lastRedirectTrace');
+    if (last) {
+        try {
+            const obj = JSON.parse(last);
+            console.groupCollapsed('[lastRedirectTrace] Previous redirect recorded -> ' + (obj.url || ''));
+            console.log('timestamp:', obj.timestamp);
+            console.log('url:', obj.url);
+            console.log('stack:', obj.stack);
+            console.groupEnd();
+        } catch (e) {
+            console.log('lastRedirectTrace (raw):', last);
+        }
+        // keep the trace for a short time to allow inspection, then clear
+        setTimeout(() => localStorage.removeItem('lastRedirectTrace'), 10000);
+    }
+} catch (e) {
+    // ignore storage access errors
+}

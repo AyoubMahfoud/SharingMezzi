@@ -30,62 +30,25 @@ namespace SharingMezzi.Web.Pages
         public string? ErrorMessage { get; set; }
 
     public async Task<IActionResult> OnGetAsync(string? returnUrl)
+    {
+        try
         {
-            // Check if user is authenticated
-            var token = _authService.GetToken();
-            if (string.IsNullOrEmpty(token))
-            {
-        return RedirectToPage("/Login", new { ReturnUrl = returnUrl ?? "/Billing" });
-            }
-
-            try
-            {
-                // Get current user
-                CurrentUser = await _authService.GetCurrentUserAsync();
-                if (CurrentUser == null)
-                {
-                    return RedirectToPage("/Login", new { ReturnUrl = returnUrl ?? "/Billing" });
-                }
-
-                // Load billing data
-                await LoadBillingData();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading billing data for user {UserId}", CurrentUser?.Id);
-                ErrorMessage = "Errore nel caricamento dei dati di fatturazione. Riprova più tardi.";
-            }
-
-            return Page();
+            // Get current user from session
+            CurrentUser = await _authService.GetCurrentUserAsync();
+            
+            // Set default values - the actual data will be loaded via JavaScript
+            CurrentBalance = 0;
+            MinimumCredit = 5;
+            EcoPoints = 0;
+            Recharges = new List<Recharge>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in Billing page");
+            ErrorMessage = "Errore nella pagina di fatturazione.";
         }
 
-        private async Task LoadBillingData()
-        {
-            if (CurrentUser == null) return;
-
-            try
-            {
-                // Load user balance
-                CurrentBalance = await _billingService.GetUserBalanceAsync(CurrentUser.Id);
-                
-                // Set user data
-                MinimumCredit = CurrentUser.CreditoMinimo;
-                EcoPoints = CurrentUser.PuntiEco;
-
-                // Load recharges
-                Recharges = await _billingService.GetUserRechargesAsync(CurrentUser.Id);
-                Recharges = Recharges.OrderByDescending(r => r.DataRicarica).ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading billing data for user {UserId}", CurrentUser.Id);
-                
-                // Set default values
-                CurrentBalance = 0;
-                MinimumCredit = 5;
-                EcoPoints = 0;
-                Recharges = new List<Recharge>();
-            }
-        }
+        return Page();
+    }
     }
 }

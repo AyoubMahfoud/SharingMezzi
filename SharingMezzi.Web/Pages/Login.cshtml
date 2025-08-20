@@ -495,9 +495,10 @@
                 const token = localStorage.getItem('token');
                 if (!token) return;
 
-                // Post to /Auth/SetSession to store token in server session
-                const resp = await fetch('/Auth/SetSession', {
+                // Post to /Auth/SetSession to store token in server session (same-origin)
+                const resp = await fetch(location.origin + '/Auth/SetSession', {
                     method: 'POST',
+                    credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token })
                 });
